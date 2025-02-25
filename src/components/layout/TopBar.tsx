@@ -1,5 +1,5 @@
 "use client";
-import MeeriLogo from '@/components/MeeriLogo';
+import MeeriLogo from "@/components/MeeriLogo";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
@@ -27,8 +27,16 @@ const TopBar = () => {
     }, []);
 
     return (
-        <div className="bg-custom-beige sticky top-0 z-20 w-full flex justify-between items-center px-8 py-4 shadow-xl lg:hidden">
-            <Link href="/" className="flex items-center gap-2 hover:scale-105 transition-transform duration-200">
+        <div className="
+         sticky top-0 z-50 px-4 py-2 shadow-md
+          flex justify-between items-center
+          bg-custom-beige/90 backdrop-blur-sm
+          text-white transition-all duration-300 ease-out
+      lg:hidden  w-full ">
+            <Link
+                href="/"
+                className="flex items-center gap-2 hover:scale-105 transition-transform duration-200"
+            >
                 <MeeriLogo />
             </Link>
 
@@ -37,7 +45,10 @@ const TopBar = () => {
                     <Link
                         href={link.url}
                         key={link.label}
-                        className={`flex gap-4 text-body-medium ${pathname === link.url ? "text-blue-1" : "text-grey-1"}`}
+                        className={`flex gap-4 text-body-medium transition-colors duration-200 ${pathname === link.url
+                            ? "text-white font-semibold"
+                            : "text-custom-brown hover:text-white"
+                            }`}
                     >
                         <p>{link.label}</p>
                     </Link>
@@ -47,16 +58,21 @@ const TopBar = () => {
             <div className="relative flex gap-4 items-center" ref={menuRef}>
                 <Menu
                     aria-label="Toggle Menu"
-                    className="cursor-pointer md:hidden ease-in-out"
+                    className="cursor-pointer md:hidden ease-in-out transition-transform hover:scale-110"
                     onClick={() => setDropdownMenu(!dropdownMenu)}
                 />
                 {dropdownMenu && (
-                    <div className="absolute top-10 right-6 flex flex-col gap-8 p-5 bg-white shadow-xl rounded-lg">
+                    <div className="absolute top-10 right-6 flex flex-col gap-4 p-5 bg-white/95 backdrop-blur-md shadow-xl rounded-lg transition-all duration-300">
                         {navLinks.map((link) => (
                             <Link
                                 href={link.url}
                                 key={link.label}
-                                className="flex gap-4 text-body-medium"
+
+                                className="flex items-center gap-4 
+                                text-body-medium text-custom-beige
+                                hover:text-custom-brown font-semibold
+                                transition-colors duration-200"
+                                onClick={() => setDropdownMenu(false)}
                             >
                                 {link.icon} <p>{link.label}</p>
                             </Link>

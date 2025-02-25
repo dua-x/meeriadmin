@@ -50,6 +50,8 @@ export default function Products() {
         name: string;
         description: string;
         price: string;
+        images: string[];
+        category: string;
         createdAt: string;
         updatedAt: string;
     }
@@ -64,13 +66,17 @@ export default function Products() {
         {
             accessorKey: "description",
             header: "Description",
-            cell: (info) => info.getValue() || "N/A",
+            cell: (info) => {
+                const value = info.getValue();
+                return typeof value === "string" ? value : "N/A";
+            },
         },
         {
             accessorKey: "Price",
             header: "Price",
             cell: (info) => info.getValue() || "N/A",
         },
+
     ];
 
 
@@ -109,48 +115,56 @@ export default function Products() {
         }
     };
     const handleUpdateProductAction = async (updatedData: DataWithId) => {
-        try { // doka henaya zidi wsh thbi lihaba dirilhom update for example                     description: "${updatedData.description}"
+        try {
+            const token = localStorage.getItem("authtoken");
 
-            // okeeyyyy thanks and sorry :( mafi sorry nkhdmo kif kif  testiha ou 9olili 
-            const response = await axios.post(
-                `${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/products/productPOST`,
-                {
-                    query: `
-                    mutation {
-            productUpdate(input: {
-                _id: "${updatedData._id}",
-                updates: {
-                    name: "${updatedData.name}",
-                    Price: ${updatedData.Price},
-                    CountINStock: ${updatedData.CountINStock}
-                    description: "${updatedData.description}"
-                    images: "${updatedData.images}"
-                }
-            }) {
-                product {
-                    _id
-                    name
-                    Price
-                    CountINStock
-                }
-                message
+            // Find the original product from the state
+            const originalProduct = products.find((product) => product._id === updatedData._id);
+            if (!originalProduct) {
+                alert("Product not found!");
+                return;
             }
-        }
-                    `,
-                },
+
+            // Create an object to hold only the changed fields
+            const changes: Partial<DataWithId> = {};
+
+            // Compare each field and add to `changes` if it's different
+            Object.keys(updatedData).forEach((key) => {
+                if (updatedData[key] !== originalProduct[key]) {
+                    changes[key] = updatedData[key];
+                }
+            });
+
+            // If no changes were made, exit early
+            if (Object.keys(changes).length === 0) {
+                alert("No changes were made.");
+                return;
+            }
+
+            // Send the PUT request with only the changed fields
+            const response = await axios.put(
+                `${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/products/editProduct/${updatedData._id}`,
+                changes, // Send only the changed fields
                 {
-                    headers: { Authorization: `Bearer ${localStorage.getItem('authtoken')}` },
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "application/json",
+                    },
                 }
             );
+
             if (response.status === 200) {
+                // Update the local state with the updated product
                 setProducts((prev) =>
-                    prev.map((item) => (item._id === updatedData._id ? updatedData as Article : item))
+                    prev.map((item) =>
+                        item._id === updatedData._id ? { ...item, ...changes } : item
+                    )
                 );
                 alert("Product updated successfully!");
             }
         } catch (error) {
-            console.error("Error updating collection:", error);
-            alert("Failed to update this product. Please try again.");
+            console.error("Error updating product:", error);
+            alert("Failed to update the product. Please try again.");
         }
     };
 

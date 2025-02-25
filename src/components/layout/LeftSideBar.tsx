@@ -9,7 +9,11 @@ const LeftSideBar = () => {
     const pathname = usePathname();
 
     return (
-        <div className="bg-custom-beige h-screen left-0 top-0 sticky p-10 flex flex-col gap-16 bg-blue-2 shadow-xl max-lg:hidden">
+        <div className="sticky left-0 top-0  p-10 shadow-md
+          flex flex-col gap-16  
+          bg-custom-beige/90 backdrop-blur-sm
+          text-white transition-all duration-300 ease-out
+      h-screen max-lg:hidden">
             <Link href="/" className="flex items-center gap-2 hover:scale-105 transition-transform duration-200">
                 <MeeriLogo />
             </Link>
@@ -20,7 +24,10 @@ const LeftSideBar = () => {
                     <Link
                         href={link.url}
                         key={link.label}
-                        className={`flex gap-4 text-body-medium ${pathname === link.url ? "text-blue-1" : "text-grey-1"}`}
+                        className={`flex gap-4 text-body-medium transition-colors duration-200 ${pathname === link.url
+                            ? "text-white font-semibold"
+                            : "text-custom-brown hover:text-white"
+                            }`}
                     >
                         {link.icon} <p>{link.label}</p>
                     </Link>
