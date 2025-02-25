@@ -133,7 +133,7 @@ const CollectionsPage = () => {
 
                 <Button
                     className="btn-primary hover:bg-custom-beige"
-                    onClick={() => router.push("/collections/CreateCollection")}
+                    onClick={() => router.push("/collections/new")}
                 >
                     <Plus className="h-4 w-4 mr-2" />
                     new collection
