@@ -7,5 +7,4 @@ const CreateCollection = () => {
         </div>
     )
 }
-
 export default CreateCollection

@@ -1,8 +1,10 @@
 'use client';
 import axios from 'axios';
 import { Card, Button } from 'flowbite-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
+import Cropper from 'react-easy-crop';
+import getCroppedImg from '@/lib/actions/cropImage';
 export default function ProductForm({ initialData }) {
     const [step, setStep] = useState(1);
     const [name, setName] = useState(initialData?.name || '');
@@ -18,7 +20,11 @@ export default function ProductForm({ initialData }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [categories, setCategories] = useState([]);
-
+    const [imagePreview, setImagePreview] = useState(null);
+    const [crop, setCrop] = useState({ x: 0, y: 0 });
+    const [zoom, setZoom] = useState(1);
+    const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+    const [selectedImageIndex, setSelectedImageIndex] = useState(null);
     useEffect(() => {
         if (initialData) {
             setName(initialData.name || '');
@@ -33,6 +39,17 @@ export default function ProductForm({ initialData }) {
             setProductDetail(initialData.productdetail || [{ color: '', sizes: [{ size: '', stock: '' }] }]);
         }
     }, [initialData]);
+    useEffect(() => {
+        return () => {
+            if (imagePreview) URL.revokeObjectURL(imagePreview);
+        };
+    }, [imagePreview]);
+    useEffect(() => {
+        if (categories.length > 0 && !category) {
+            setCategory(initialData?.category || categories[0]._id);
+        }
+    }, [categories]);
+    
     useEffect(() => {
         axios
             .post(`${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/categories/categoryGET`, {
@@ -63,33 +80,17 @@ export default function ProductForm({ initialData }) {
         setStep((prev) => prev - 1);
     };
 
-    const handleFileChange = (e) => {
-        const files = Array.from(e.target.files);
-        const newImages = [...images];
-
-        files.forEach(file => {
-            if (!newImages.some(img => img.name === file.name)) {
-                if (file.size <= 5 * 1024 * 1024) { // Max 5MB per image
-                    newImages.push(file);
-                } else {
-                    console.error('File too large:', file.name);
-                }
-            }
-        });
-
-        if (newImages.length > 5) {
-            console.error('Cannot select more than 5 images');
-            return;
-        }
-
-        setImages(newImages);
-    };
+    
 
     const removeImage = (index) => {
         setImages((prevImages) => prevImages.filter((_, i) => i !== index));
     };
 
-
+    const handleImageClick = (index) => {
+        const img = images[index];
+        setSelectedImageIndex(index);
+        setImagePreview(img instanceof File ? URL.createObjectURL(img) : img);
+    };    
     const handleProductDetailChange = (index, field, value) => {
         const newProductDetails = [...productdetail];
         newProductDetails[index][field] = value;
@@ -112,69 +113,99 @@ export default function ProductForm({ initialData }) {
         setProductDetail(newProductDetails);
     };
 
+    const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
+        setCroppedAreaPixels(croppedAreaPixels);
+    }, []);
 
+    const handleFileChange = (e) => {
+        const files = Array.from(e.target.files);
+        const validFiles = files.filter((file) => file.size <= 5 * 1024 * 1024);
+    
+        if (validFiles.length === 0) {
+            setError('File too large or invalid');
+            return;
+        }
+    
+        setImages((prev) => [...prev, ...validFiles]);
+    
+        const reader = new FileReader();
+        reader.onload = () => setImagePreview(reader.result);
+        reader.readAsDataURL(validFiles[0]);
+    };
+    
+    const saveCroppedImage = async () => {
+        if (!croppedAreaPixels || !imagePreview) return;
+
+        try {
+            const croppedImage = await getCroppedImg(imagePreview, croppedAreaPixels);
+            setImages((prev) => {
+                const updatedImages = [...prev];
+                updatedImages[selectedImageIndex] = croppedImage;
+                return updatedImages;
+            });
+
+            setSelectedImageIndex(null);
+            setImagePreview(null);
+        } catch (error) {
+            console.error("Error cropping image:", error);
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
+    
         if (!name || !Price || isNaN(Price)) {
             setError('Please fill out all fields and ensure the price is a valid number.');
             return;
         }
-
+    
         setError(null);
         setLoading(true);
-
-        const formattedProductDetail = productdetail.map((detail) => ({
-            color: detail.color,
-            sizes: detail.sizes.map((size) => ({
-                size: size.size,
-                stock: size.stock,
-            })),
-        }));
-
-        const formData = new FormData();
-        images.forEach((image) => {
-            formData.append("images", image);
-        });
-
-        formData.append('name', name);
-        formData.append('description', description);
-        formData.append('richDescription', richDescription);
-        formData.append('Price', Price);
-        formData.append('category', category);
-        formData.append('CountINStock', CountINStock);
-        formData.append('brand', brand);
-        formData.append('IsFeatured', IsFeatured);
-        formData.append('productdetail', JSON.stringify(formattedProductDetail));
-
+    
         try {
-            const token = localStorage.getItem('authtoken');
-            if (initialData) {
-                // EDIT PRODUCT
-                await axios.put(
-                    `${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/products/${initialData._id}`,
-                    formData,
-                    {
-                        headers: {
-                            'Content-Type': 'multipart/form-data',
-                            Authorization: `Bearer ${token}`,
-                        },
-                    }
-                );
-            } else {
-                // CREATE PRODUCT
-                await axios.post(
-                    `${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/products/CreateProduct`,
-                    formData,
-                    {
-                        headers: {
-                            'Content-Type': 'multipart/form-data',
-                            Authorization: `Bearer ${token}`,
-                        },
-                    }
-                );
+            const formData = new FormData();
+    
+            if (imagePreview && croppedAreaPixels) {
+                try {
+                    const croppedImage = await getCroppedImg(imagePreview, croppedAreaPixels);
+                    formData.append('images', croppedImage);
+                } catch (error) {
+                    console.error('Error cropping image:', error);
+                    setLoading(false);
+                    return;
+                }
             }
+    
+            images.forEach((image) => {
+                if (image) formData.append("images", image);
+            });
+            
+    
+            formData.append('name', name);
+            formData.append('description', description);
+            formData.append('richDescription', richDescription);
+            formData.append('Price', Price);
+            formData.append('category', category);
+            formData.append('CountINStock', CountINStock);
+            formData.append('brand', brand);
+            formData.append('IsFeatured', IsFeatured);
+            formData.append('productdetail', JSON.stringify(productdetail));
+    
+            const token = localStorage.getItem('authtoken');
+    
+            const endpoint = initialData
+                ? `${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/products/${initialData._id}`
+                : `${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/products/CreateProduct`;
+    
+            const method = initialData ? 'put' : 'post';
+    
+            await axios[method](endpoint, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+    
             location.href = '/products';
         } catch (err) {
             console.error('Error:', err.message);
@@ -182,7 +213,7 @@ export default function ProductForm({ initialData }) {
         } finally {
             setLoading(false);
         }
-    };
+    };    
 
     return (
 
@@ -208,28 +239,69 @@ export default function ProductForm({ initialData }) {
                         <input className="form-input" type="text" value={richDescription} onChange={(e) => setRichDescription(e.target.value)} />
                     </div>
                     <div className="form-row mb-3">
-                        <label>Photos</label>
-                        <input className="form-input" type="file" multiple onChange={handleFileChange} />
+                        
+                    <div className="space-y-4">
+            {/* File Upload */}
+            <div className="bg-gray-100 p-4 rounded-lg shadow-md">
+                <label className="block text-gray-700 font-medium">Upload Images</label>
+                <input
+                    type="file"
+                    multiple
+                    className="mt-2 w-full border rounded-lg p-2 focus:ring focus:ring-blue-300"
+                    onChange={handleFileChange}
+                />
+            </div>
 
-                        {/* Show Image Previews */}
-                        <div className="flex flex-wrap gap-2 mt-2">
-                            {images.map((img, index) => (
-                                <div key={index} className="relative">
-                                    <Image
-                                        src={URL.createObjectURL(img)}
-                                        alt="Preview"
-                                        className="w-20 h-20 object-cover rounded border"
-                                    />
-                                    <button
-                                        type="button"
-                                        className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center"
-                                        onClick={() => removeImage(index)}
-                                    >
-                                        ×
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
+            {/* Image Previews */}
+            <div className="grid grid-cols-5 gap-3">
+                {images.map((img, index) => (
+                    <div
+                        key={index}
+                        className="relative group cursor-pointer hover:scale-105 transition-all duration-300"
+                    >
+                       <Image
+    src={img instanceof File ? URL.createObjectURL(img) : img}
+    alt="Preview"
+    className="w-24 h-24 object-cover rounded-lg shadow-md"
+    width={96}
+    height={96}
+    onClick={() => handleImageClick(index)}
+/>
+
+                        <button
+                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+                            onClick={() => removeImage(index)}
+                        >
+                            ×
+                        </button>
+                    </div>
+                ))}
+            </div>
+
+            {/* Image Cropper */}
+            {imagePreview && selectedImageIndex !== null && (
+                <div className="relative bg-white p-4 rounded-lg shadow-lg">
+                    <h3 className="text-lg font-semibold mb-2">Crop Image</h3>
+                    <div className="relative w-full h-64 rounded-lg overflow-hidden border">
+                        <Cropper
+                            image={imagePreview}
+                            crop={crop}
+                            zoom={zoom}
+                            aspect={3 / 4}
+                            onCropChange={setCrop}
+                            onZoomChange={setZoom}
+                            onCropComplete={onCropComplete}
+                        />
+                    </div>
+                    <button
+                        className="mt-4 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all"
+                        onClick={saveCroppedImage}
+                    >
+                        Save Cropped Image
+                    </button>
+                </div>
+            )}
+        </div>
                     </div>
 
                     <div className="form-row mb-3">
@@ -266,10 +338,15 @@ export default function ProductForm({ initialData }) {
                     </div>
                     <div className="form-row mb-3">
                         <label>Featured</label>
-                        <select className="form-select" value={IsFeatured} onChange={(e) => setIsFeatured(e.target.value)}>
-                            <option value="false">No</option>
-                            <option value="true">Yes</option>
-                        </select>
+                        <select
+                                className="form-select"
+                                value={IsFeatured ? 'true' : 'false'}
+                                onChange={(e) => setIsFeatured(e.target.value === 'true')}
+                            >
+                                <option value="false">No</option>
+                                <option value="true">Yes</option>
+                            </select>
+
                     </div>
                     <div className="form-row">
                         <Button className="btn-primary w-full" type="button" onClick={nextStep}>
@@ -324,16 +401,12 @@ export default function ProductForm({ initialData }) {
                             Back
                         </Button>
                         <Button className="btn-primary w-1/2" type="submit" onClick={handleSubmit} disabled={loading}>
-                            {loading ? 'Creating...' : 'Create Product'}
-                        </Button>
+                        {loading ? <span className="animate-pulse">Creating...</span> : 'Create Product'}
+                    </Button>
+
                     </div>
                 </div>
             )}
         </Card>
     );
-}
-
-
-
-
-
+};

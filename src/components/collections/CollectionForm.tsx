@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import axios from "axios";
 import { Separator } from "../ui/separator";
-import { Card, Button } from 'flowbite-react';
+import { Card, Button } from "flowbite-react";
 import {
     Form,
     FormControl,
@@ -16,13 +16,18 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "../ui/textarea";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import toast from "react-hot-toast";
+import Cropper from "react-easy-crop";
+import getCroppedImg from "@/lib/actions/cropImage";
+import { Area } from "react-easy-crop";
+
+
 
 type CollectionType = {
     _id: string;
     name: string;
-    description: string; // Add the description field here
+    description: string;
     icon: string;
     color: string;
     typestore: string;
@@ -30,7 +35,6 @@ type CollectionType = {
     updatedAt: string;
 };
 
-// Define the props for the component
 interface CollectionFormProps {
     initialData?: CollectionType | null;
 }
@@ -45,6 +49,11 @@ const formSchema = z.object({
 const CollectionForm: React.FC<CollectionFormProps> = ({ initialData }) => {
     const [loading, setLoading] = useState(false);
     const [images, setImages] = useState<File[]>([]);
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [crop, setCrop] = useState({ x: 0, y: 0 });
+    const [zoom, setZoom] = useState(1);
+    const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
@@ -54,16 +63,26 @@ const CollectionForm: React.FC<CollectionFormProps> = ({ initialData }) => {
             typestore: initialData?.typestore || "",
         },
     });
+
     const router = useRouter();
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files) {
-            const fileArray = Array.from(e.target.files);
-            setImages(fileArray);
-            form.setValue("icon", fileArray.map((file) => file.name));
+        if (e.target.files && e.target.files.length > 0) {
+            const file = e.target.files[0];
+            setImages([file]);
+
+            const reader = new FileReader();
+            reader.onload = () => {
+                setImagePreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+
+            form.setValue("icon", [file.name]);
         }
     };
-
+    const onCropComplete = useCallback((croppedArea: Area, croppedAreaPixels: Area) => {
+        setCroppedAreaPixels(croppedAreaPixels);
+    }, []);
     const handleSubmit = async (data: z.infer<typeof formSchema>) => {
         setLoading(true);
         const formData = new FormData();
@@ -71,13 +90,22 @@ const CollectionForm: React.FC<CollectionFormProps> = ({ initialData }) => {
         formData.append("name", data.name);
         formData.append("description", data.description);
         formData.append("typestore", data.typestore);
-        images.forEach((icon) => {
-            formData.append("icon", icon);
-        });
+
+        if (images.length > 0 && croppedAreaPixels) {
+            try {
+                const croppedImage = await getCroppedImg(imagePreview as string, croppedAreaPixels);
+                formData.append("icon", croppedImage);
+            } catch (error) {
+                console.error("Error cropping image:", error);
+                toast.error("Failed to process image.");
+                setLoading(false);
+                return;
+            }
+        }
 
         try {
             const token = localStorage.getItem("authtoken");
-            const response = await axios.post(
+            await axios.post(
                 process.env.NEXT_PUBLIC_IPHOST + "/StoreAPI/categories/CreateCategory",
                 formData,
                 {
@@ -87,7 +115,7 @@ const CollectionForm: React.FC<CollectionFormProps> = ({ initialData }) => {
                     },
                 }
             );
-            console.log(response);
+
             toast.success("Category created successfully!");
             router.back();
         } catch (error) {
@@ -128,12 +156,25 @@ const CollectionForm: React.FC<CollectionFormProps> = ({ initialData }) => {
                                 <FormItem>
                                     <FormLabel>Icon</FormLabel>
                                     <FormControl>
-                                        <Input type="file" multiple onChange={handleFileChange} />
+                                        <Input type="file" accept="image/*" onChange={handleFileChange} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
+                        {imagePreview && (
+                            <div className="relative w-full h-64">
+                                <Cropper
+                                    image={imagePreview}
+                                    crop={crop}
+                                    zoom={zoom}
+                                    aspect={3 / 4}
+                                    onCropChange={setCrop}
+                                    onZoomChange={setZoom}
+                                    onCropComplete={onCropComplete}
+                                />
+                            </div>
+                        )}
                         <FormField
                             control={form.control}
                             name="typestore"

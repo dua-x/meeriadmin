@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "../globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Borcelle - Admin Auth",
-  description: "Admin dashboard to manage Borcelle's data",
+  title: "Merri - Admin Auth",
+  description: "next.js 14 Merri Ecomerce store ",
 };
 
 export default function RootLayout({
@@ -16,7 +14,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body >
+        <div className="flex max-lg:flex-col">
+          <main className="flex-1">{children}</main>
+        </div>
+      </body>
     </html>
   );
 }

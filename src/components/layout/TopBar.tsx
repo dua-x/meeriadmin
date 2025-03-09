@@ -2,21 +2,35 @@
 import MeeriLogo from "@/components/MeeriLogo";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
-import { Menu } from "lucide-react";
-
+import { usePathname, useRouter } from "next/navigation";
+import { CircleUserRound, Menu, X } from 'lucide-react';
 import { navLinks } from "@/lib/constants";
 
 const TopBar = () => {
     const [dropdownMenu, setDropdownMenu] = useState(false);
+    const [userDropdown, setUserDropdown] = useState(false);
+    const [user, setUser] = useState<{ username: string; email: string } | null>(null);
     const pathname = usePathname();
     const menuRef = useRef<HTMLDivElement>(null);
-
+    const userDropdownRef = useRef<HTMLDivElement>(null);
+    const router = useRouter();
+    const handleLogout = async () => {
+        try {
+            localStorage.removeItem('authtoken'); // Clear the token
+            setUser(null); // Reset the user state
+            router.push('/');
+        } catch (error) {
+            console.error('Failed to log out:', error);
+        }
+    };
     // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
                 setDropdownMenu(false);
+            }
+            if (userDropdownRef.current && !userDropdownRef.current.contains(event.target as Node)) {
+                setUserDropdown(false);
             }
         };
 
@@ -77,6 +91,46 @@ const TopBar = () => {
                                 {link.icon} <p>{link.label}</p>
                             </Link>
                         ))}
+                    </div>
+                )}
+
+                 {/* User Icon & Dropdown */}
+                 <button
+                    className="cursor-pointer p-1 relative transition-transform duration-200 hover:scale-110"
+                    onClick={() => setUserDropdown(!userDropdown)}
+                    aria-label="User profile"
+                >
+                    <CircleUserRound />
+                </button>
+
+                {/* Dropdown Menu */}
+                {userDropdown && (
+                    <div
+                        ref={userDropdownRef}
+                        className="fixed top-[72px] right-6 z-50 flex flex-col gap-2 p-4 w-56 
+                        rounded-lg border bg-white shadow-xl transition-opacity duration-300 scale-100 opacity-100"
+                    >
+                        <div className="flex flex-col items-center text-center">
+                            <CircleUserRound className="text-gray-600 w-12 h-12 mb-2" />
+                            <p className="font-semibold">{user ? user.username : 'Guest'}</p>
+                            <p className="text-sm text-gray-500">{user ? user.email : 'guest@example.com'}</p>
+                        </div>
+
+                        {user ? (
+                            <button
+                                onClick={handleLogout}
+                                className="mt-3 text-center bg-custom-beige text-white py-1 rounded-lg hover:bg-[#a27a64] transition-colors duration-300"
+                            >
+                                Log out
+                            </button>
+                        ) : (
+                            <Link
+                                href="/signin"
+                                className="mt-3 text-center bg-custom-beige hover:bg-[#a27a64] text-white py-1 rounded-lg transition-colors duration-300"
+                            >
+                                Sign In
+                            </Link>
+                        )}
                     </div>
                 )}
             </div>

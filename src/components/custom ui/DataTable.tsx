@@ -43,7 +43,7 @@ export function DataTable<TData extends DataWithId, TValue>({
     data,
     searchKey,
     editLinkBase,
-    onDeleteAction, // Correct
+    onDeleteAction, 
     onUpdateAction,
 }: DataTableProps<TData, TValue>) {
 
@@ -70,8 +70,9 @@ export function DataTable<TData extends DataWithId, TValue>({
         }
     };
     const handleDeleteClick = (product: TData) => {
-        setSelectedProduct(product);
-        setIsDeleteDialogOpen(true);
+        console.log("Delete clicked for:", product);
+    setSelectedProduct(product);
+    setIsDeleteDialogOpen(true);
     };
 
     const confirmDelete = () => {
@@ -94,6 +95,12 @@ export function DataTable<TData extends DataWithId, TValue>({
             setEditableData({ ...editableData, images: updatedImages });
         }
     };
+    const handleAddImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (editableData && e.target.files) {
+            const newImages = Array.from(e.target.files).map((file) => URL.createObjectURL(file));
+            setEditableData({ ...editableData, images: [...(editableData.images as string[]), ...newImages] });
+        }
+    };
 
     const handleImageDelete = () => {
         if (editableData && currentImage) {
@@ -103,12 +110,7 @@ export function DataTable<TData extends DataWithId, TValue>({
         }
     };
 
-    const handleAddImage = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (editableData && e.target.files) {
-            const newImages = Array.from(e.target.files).map((file) => URL.createObjectURL(file));
-            setEditableData({ ...editableData, images: [...(editableData.images as string[]), ...newImages] });
-        }
-    };
+
     const handleIconDelete = () => {
         if (editableData) {
             setEditableData({ ...editableData, icon: "" });
@@ -262,123 +264,126 @@ export function DataTable<TData extends DataWithId, TValue>({
 
             {selectedRow && (
                 <Dialog open={!!selectedRow} onOpenChange={() => setSelectedRow(null)}>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Edit Details</DialogTitle>
-                        </DialogHeader>
-                        <div className="p-4 space-y-4">
-                            {editableData && Object.entries(editableData).map(([key, value]) =>
-                                key !== "_id" && (
-                                    <div key={key} className="flex flex-col py-2">
-                                        <label className="text-sm font-semibold capitalize break-words">
-                                            {key.replace(/_/g, " ")}
-                                        </label>
-
-                                        {/* Handle images and icons correctly */}
-                                        {key === "images" && Array.isArray(value) ? (
-                                            <div className="flex flex-wrap gap-2">
-                                                {value.map((imgSrc, index) => (
-                                                    <div key={index} className="relative">
-                                                        <img
-                                                            src={imgSrc as string}
-                                                            alt={`Image ${index + 1}`}
-                                                            className="w-20 h-20 object-cover rounded-lg border"
-                                                            onClick={() => handleImageClick(imgSrc as string)}
-                                                        />
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            className="absolute top-1 right-1 p-1 bg-white rounded-full"
-                                                            onClick={() => handleSpecificImageDelete(index)}
-                                                        >
-                                                            <X className="w-4 h-4 text-red-500" />
-                                                        </Button>
-                                                    </div>
-                                                ))}
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => document.getElementById("image-input")?.click()}
-                                                    className="h-20 w-20 flex items-center justify-center border border-dashed"
-                                                >
-                                                    Add Image
-                                                </Button>
-                                                <Input
-                                                    type="file"
-                                                    id="image-input"
-                                                    accept="image/*"
-                                                    multiple
-                                                    className="hidden"
-                                                    onChange={handleAddImage}
-                                                />
-                                            </div>
-                                        ) : key === "icon" && typeof value === "string" ? (
-                                            <div className="flex flex-col gap-2">
-                                                {value ? (
-                                                    <div className="flex items-center gap-2">
-                                                        <img
-                                                            src={value}
-                                                            alt="Icon"
-                                                            className="w-20 h-20 object-cover rounded-lg border cursor-pointer"
-                                                            onClick={() => handleImageClick(value)}
-                                                        />
-                                                        <Button
-                                                            variant="destructive"
-                                                            size="sm"
-                                                            onClick={handleIconDelete}
-                                                        >
-                                                            Delete Icon
-                                                        </Button>
-                                                    </div>
-                                                ) : (
-                                                    <div>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => document.getElementById("icon-input")?.click()}
-                                                        >
-                                                            Add Icon
-                                                        </Button>
-                                                        <Input
-                                                            type="file"
-                                                            id="icon-input"
-                                                            accept="image/*"
-                                                            className="hidden"
-                                                            onChange={handleAddIcon}
-                                                        />
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ) : typeof value === "object" && value !== null ? (
-                                            <div className="text-sm text-gray-800 break-words">
-                                                {Array.isArray(value) ? value.join(", ") : JSON.stringify(value)}
-                                            </div>
-                                        ) : (
+<DialogContent className="sm:m-6 sm:max-w-sm md:max-w-2xl rounded-lg">
+<DialogHeader>
+                        <DialogTitle>Edit Details</DialogTitle>
+                    </DialogHeader>
+                    <div className="max-h-[70vh] overflow-y-auto">
+                        {editableData && Object.entries(editableData).map(([key, value]) =>
+                            key !== "_id" && (
+                                <div key={key} className="flex flex-col py-2">
+                                    <label className="text-sm font-semibold capitalize break-words">
+                                        {key.replace(/_/g, " ")}
+                                    </label>
+            
+                                    {key === "images" && Array.isArray(value) ? (
+                                        <div className="flex flex-wrap gap-2">
+                                            {value.map((imgSrc, index) => (
+                                                <div key={index} className="relative">
+                                                    <img
+                                                        src={imgSrc as string}
+                                                        alt={`Image ${index + 1}`}
+                                                        className="w-20 h-20 object-cover rounded-lg border"
+                                                        onClick={() => handleImageClick(imgSrc as string)}
+                                                    />
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="absolute top-1 right-1 p-1 bg-white rounded-full"
+                                                        onClick={() => handleSpecificImageDelete(index)}
+                                                    >
+                                                        <X className="w-4 h-4 text-red-500" />
+                                                    </Button>
+                                                </div>
+                                            ))}
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => document.getElementById("image-input")?.click()}
+                                                className="h-20 w-20 flex items-center justify-center border border-dashed"
+                                            >
+                                                Add Image
+                                            </Button>
                                             <Input
-                                                value={String(value)}
-                                                onChange={(e) => handleInputChange(key, e.target.value)}
-                                                placeholder={key}
+                                                type="file"
+                                                id="image-input"
+                                                accept="image/*"
+                                                multiple
+                                                className="hidden"
+                                                onChange={handleAddImage}
                                             />
-                                        )}
-                                    </div>
-                                )
-                            )}
-
-                        </div>
-                        <div className="flex justify-end gap-2 p-4">
-                            <Button variant="outline" onClick={() => setSelectedRow(null)}>
-                                Cancel
-                            </Button>
-                            <Button variant="destructive" onClick={() => onDeleteAction(selectedRow?._id as string)}>
-                                Delete
-                            </Button>
-                            <Button onClick={handleSave}>
-                                Save
-                            </Button>
-
-                        </div>
-                    </DialogContent>
-                </Dialog>
+                                        </div>
+                                    ) : key === "icon" && typeof value === "string" ? (
+                                        <div className="flex flex-col gap-2">
+                                            {value ? (
+                                                <div className="flex items-center gap-2">
+                                                    <img
+                                                        src={value}
+                                                        alt="Icon"
+                                                        className="w-20 h-20 object-cover rounded-lg border cursor-pointer"
+                                                        onClick={() => handleImageClick(value)}
+                                                    />
+                                                    <Button
+                                                        variant="destructive"
+                                                        size="sm"
+                                                        onClick={handleIconDelete}
+                                                    >
+                                                        Delete Icon
+                                                    </Button>
+                                                </div>
+                                            ) : (
+                                                <div>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => document.getElementById("icon-input")?.click()}
+                                                    >
+                                                        Add Icon
+                                                    </Button>
+                                                    <Input
+                                                        type="file"
+                                                        id="icon-input"
+                                                        accept="image/*"
+                                                        className="hidden"
+                                                        onChange={handleAddIcon}
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : key === "category" && typeof value === "object" && value !== null ? (
+                                        <div className="text-sm text-gray-800 break-words">
+                                            {"name" in value && typeof value.name === "string" ? value.name : "N/A"}
+                                        </div>
+                                    ) : typeof value === "object" && value !== null ? (
+                                        <div className="text-sm text-gray-800 break-words">
+                                            {Array.isArray(value) ? value.join(", ") : JSON.stringify(value)}
+                                        </div>
+                                    
+                                    ) : (
+                                        <Input
+                                            value={String(value)}
+                                            onChange={(e) => handleInputChange(key, e.target.value)}
+                                            placeholder={key}
+                                        />
+                                    )}
+                                </div>
+                            )
+                        )}
+                    </div>
+                    <div className="flex justify-end gap-2 p-4">
+                        <Button variant="outline" onClick={() => setSelectedRow(null)}>
+                            Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={() => onDeleteAction(selectedRow?._id as string)}>
+                            Delete
+                        </Button>
+                        <Button onClick={handleSave}>
+                            Save
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+            
             )}
         </div>
     );
