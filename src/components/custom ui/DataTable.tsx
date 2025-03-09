@@ -70,9 +70,8 @@ export function DataTable<TData extends DataWithId, TValue>({
         }
     };
     const handleDeleteClick = (product: TData) => {
-        console.log("Delete clicked for:", product);
-    setSelectedProduct(product);
-    setIsDeleteDialogOpen(true);
+        setSelectedProduct(product);
+        setIsDeleteDialogOpen(true);
     };
 
     const confirmDelete = () => {
@@ -233,10 +232,7 @@ export function DataTable<TData extends DataWithId, TValue>({
                 <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
                     <DialogContent>
                         <div className="relative">
-                            <img src={currentImage ?? ""} alt="Enlarged" className="w-full h-auto" />
-                            <Button variant="ghost" className="absolute top-2 right-2" onClick={() => setImageDialogOpen(false)}>
-                                <X className="w-6 h-6" />
-                            </Button>
+                            <img src={currentImage ?? ""} alt="Enlarged" className="sm:m-6 sm:max-w-sm md:max-w-2xl rounded-lg" />
                             <Button variant="destructive" onClick={handleImageDelete}>
                                 Delete Image
                             </Button>
@@ -244,13 +240,6 @@ export function DataTable<TData extends DataWithId, TValue>({
                     </DialogContent>
                 </Dialog>
 
-                {selectedRow && (
-                    <Dialog open={!!selectedRow} onOpenChange={() => setSelectedRow(null)}>
-                        <DialogContent>
-                            <Input type="file" accept="image/*" multiple onChange={handleAddImage} />
-                        </DialogContent>
-                    </Dialog>
-                )}
             </div>
 
             <div className="flex flex-wrap justify-center md:justify-end space-x-2 py-4">
