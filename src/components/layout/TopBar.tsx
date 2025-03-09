@@ -3,7 +3,7 @@ import MeeriLogo from "@/components/MeeriLogo";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { CircleUserRound, Menu, X } from 'lucide-react';
+import { CircleUserRound, Menu } from 'lucide-react';
 import { navLinks } from "@/lib/constants";
 
 const TopBar = () => {
