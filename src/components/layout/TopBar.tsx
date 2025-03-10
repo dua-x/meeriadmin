@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { CircleUserRound, Menu } from 'lucide-react';
 import { navLinks } from "@/lib/constants";
-
+import { handlelog} from "@/lib/actions/actions";
 const TopBar = () => {
     const [dropdownMenu, setDropdownMenu] = useState(false);
     const [userDropdown, setUserDropdown] = useState(false);
@@ -18,11 +18,28 @@ const TopBar = () => {
         try {
             localStorage.removeItem('authtoken'); // Clear the token
             setUser(null); // Reset the user state
-            router.push('/');
+            setTimeout(()=>{
+                router.push('/signin');
+
+            },200);
         } catch (error) {
             console.error('Failed to log out:', error);
         }
     };
+    useEffect(() => {
+        const fetchUser = async () => {
+            try {
+                const token = localStorage.getItem('authtoken');
+                if (!token) return;
+                const userData = await handlelog();
+                setUser(userData);
+            } catch (error) {
+                console.error('Failed to fetch user:', error);
+            }
+        };
+        fetchUser();
+    }, []);
+
     // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -111,9 +128,9 @@ const TopBar = () => {
                         rounded-lg border bg-white shadow-xl transition-opacity duration-300 scale-100 opacity-100"
                     >
                         <div className="flex flex-col items-center text-center">
-                            <CircleUserRound className="text-gray-600 w-12 h-12 mb-2" />
-                            <p className="font-semibold">{user ? user.username : 'Guest'}</p>
-                            <p className="text-sm text-gray-500">{user ? user.email : 'guest@example.com'}</p>
+                            <CircleUserRound className="text-custom-brown  w-12 h-12 mb-2" />
+                            <p className="font-semibold text-gray-500">{user ? user.username : 'Admin'}</p>
+                            <p className="text-sm text-gray-500">{user ? user.email : 'admin@meeri.com'}</p>
                         </div>
 
                         {user ? (

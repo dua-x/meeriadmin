@@ -61,3 +61,39 @@ export const getSalesPerMonth = async () => {
 
     // return graphData
 }
+export const handlelog = async () => {
+    try {
+        const token = localStorage.getItem('authtoken'); // Retrieve token from local storage
+
+        const response = await axios.post(
+            `${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/users/userGET`,
+            {
+                query: `
+                    query {
+                            userGETById {
+                                
+                                username
+                                email
+                            }
+                            }
+                                            `,
+            },
+            {
+                headers: {
+                    'Content-Type': 'application/json', // Use 'application/json' for GraphQL queries
+                    Authorization: `Bearer ${token}`, // Add token in the Authorization header
+                },
+            }
+        );
+
+        if (!response.data) {
+            throw new Error("Failed to fetch user informations");
+        }
+
+        const user = response.data.data.userGETById; // Adjust this based on API response structure
+        return user;
+    } catch (error) {
+        console.error("Error fetching user informations :", error);
+        return error;
+    }
+}

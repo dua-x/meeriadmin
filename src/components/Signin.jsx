@@ -32,13 +32,14 @@ export default function SignIn() {
                 process.env.NEXT_PUBLIC_IPHOST + '/StoreAPI/users/userauth',
                 {
                     query: `
-                    mutation userLogin($email: String!, $password: String!) {
-                        userLogin(input: {email: $email, password: $password}) {
+                    mutation userLoginAdmin($email: String!, $password: String!) {
+                        userLoginAdmin(input: {email: $email, password: $password}) {
                             username
                             token
                             message
                         }
                     }
+                          
                 `,
                     variables: {
                         email: formdata.email,
@@ -47,14 +48,23 @@ export default function SignIn() {
                 }
             );
 
-            const token = response.data.data.userLogin.token;
+            const token = response.data.data.userLoginAdmin.token;
             localStorage.setItem('authtoken', token);
-            router.push('/');
+         if(token ){
+            setMessage("Logged in successfully");
+            setTimeout(()=>{
+                router.push('/');
+
+            },200);
+         }else{
+             setError(response.data.data.userLoginAdmin.message||"Failed to log in");
+         }
+            
         } catch (error) {
             if (error.response) {
-                setError(error.response.data.data.userLogin.message || "An error occurred");
+                setError(error.response.data.data.userLoginAdmin.message || "An error occurred");
             } else {
-                setError("Failed to sign in. Please try again later.");
+                setError("Failed to log in. Please try again later.");
             }
         }
     };
