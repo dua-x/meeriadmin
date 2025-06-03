@@ -23,6 +23,7 @@ export default function Customers() {
                         username
                         email
                         createdAt
+                        isModerator
                     }
                 }
             `,
@@ -78,6 +79,22 @@ export default function Customers() {
                 });
             },
         },
+            {
+        accessorKey: "isModerator",
+        header: "Moderator",
+        cell: (info) => {
+            const isModerator = info.getValue() as boolean;
+            return (
+                <span className={`px-2 py-1 rounded-full text-xs ${
+                    isModerator 
+                        ? "bg-green-100 text-green-800" 
+                        : "bg-gray-100 text-gray-800"
+                }`}>
+                    {isModerator ? "Yes" : "No"}
+                </span>
+            );
+        },
+    },
     ];
 
     const handleDeleteCustomer = async (id: string) => {
@@ -143,7 +160,7 @@ export default function Customers() {
 
             // Send the PUT request with only the changed fields
             const response = await axios.put(
-                `${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/users/editUser/${updatedData._id}`,
+                `${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/users/Update/${updatedData._id}`,
                 changes,
                 {
                     headers: {
