@@ -169,12 +169,16 @@ export default function Customers() {
     };
 
     return (
-        <div>
-            <div className="flex items-center px-8 py-10 xl:mx-10 justify-between">
-                <h1 className="lg:text-4xl text-3xl font-bold text-[#857B74] drop-shadow-lg">
-                    Customers
-                </h1>
-            </div>
+        <div className="px-4 py-6 md:px-8 md:py-10 xl:mx-10">
+      <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-[#857B74] drop-shadow-lg mb-2">
+                        Customer Management
+      </h1>
+                   
+                    <p className="text-sm text-gray-500 mt-1">
+                        {customers.length} registered customers
+                    </p>
+      
+                
             <DataTable<DataWithId, unknown>
                 columns={columns as ColumnDef<DataWithId, unknown>[]}
                 data={customers}
