@@ -59,7 +59,7 @@ export default function Dashboard() {
 
         const currentMonth = new Date().getMonth();
         const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        const dynamicGraphData = months.slice(0, currentMonth + 1).map((month, index) => ({
+        const dynamicGraphData = months.slice(0, currentMonth + 1).map((month) => ({
           name: month,
           sales: Math.floor(Math.random() * 5000) + 1000
         }));
