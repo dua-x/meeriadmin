@@ -45,10 +45,10 @@ export default function ProductForm({ initialData }) {
         };
     }, [imagePreview]);
     useEffect(() => {
-        if (categories.length > 0 && !category) {
-            setCategory(initialData?.category || categories[0]._id);
-        }
-    }, [categories]);
+    if (categories.length > 0 && !category) {
+        setCategory(initialData?.category || categories[0]._id);
+    }
+}, [categories, category, initialData?.category]);
     
     useEffect(() => {
         axios

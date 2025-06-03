@@ -1,10 +1,6 @@
 "use client";
-
-import { Plus } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/custom ui/DataTable";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import axios from "axios";
 
@@ -15,8 +11,6 @@ interface DataWithId {
 
 export default function Customers() {
     const [customers, setCustomers] = useState<User[]>([]);
-    const router = useRouter();
-
    
     useEffect(() => {
         const token = localStorage.getItem("authtoken");

@@ -64,13 +64,12 @@ export default function Orders() {
                 );
 
                 if (response.data?.data?.orderGET) {
-                    const formattedOrders = response.data.data.orderGET.map((order: any) => ({
+                    const formattedOrders = response.data.data.orderGET.map((order: OrderType) => ({
                         ...order,
-                        id: order._id, // Add id for compatibility
-                        idorder: order.idorder, 
+                        idorder: order._id, 
                         username: order.firstname && order.lastname 
                 ? `${order.firstname} ${order.lastname}`
-                : 'Guest Customer'// Add idorder for display
+                : 'Guest Customer'
                     }));
                     setOrders(formattedOrders);
                 } else {
