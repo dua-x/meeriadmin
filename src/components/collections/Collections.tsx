@@ -7,8 +7,6 @@ import { Plus } from "lucide-react";
 import { DataTable } from "@/components/custom ui/DataTable";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
-import collection from "@/app/(Dashboard)/collections/page";
-
 // Define DataWithId manually
 interface DataWithId {
     _id: string;
