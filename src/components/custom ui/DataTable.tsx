@@ -1,7 +1,6 @@
-"use client";
+'use client';
 import { useState } from "react";
-import Link from "next/link";
-import Image from "next/image"; // Replaced img with Next.js Image component
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2, X } from "lucide-react";
 import {
@@ -22,7 +21,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "../ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { motion } from "framer-motion";
 
 interface DataWithId {
   _id: string;
@@ -33,37 +33,35 @@ interface DataTableProps<TData extends DataWithId, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   searchKey: string;
-  editLinkBase?: string;
   onDeleteAction?: (id: string) => void;
   onUpdateAction?: (updatedData: TData) => void;
   showActions?: boolean;
   onRowClick?: (data: TData) => void;
   detailsTitle?: string;
   renderDetails?: (data: TData) => React.ReactNode;
+  allowEdit?: boolean; // Add this new prop
 }
 
 export function DataTable<TData extends DataWithId, TValue>({
   columns,
   data,
   searchKey,
-  editLinkBase,
   onDeleteAction, 
   onUpdateAction,
   showActions = true,
   onRowClick,
   detailsTitle = "Details",
   renderDetails,
+  allowEdit = true, 
 }: DataTableProps<TData, TValue>) {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [selectedRow, setSelectedRow] = useState<TData | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<TData | null>(null);
-  const [editableData, setEditableData] = useState<TData | null>(null);
-  const [imageDialogOpen, setImageDialogOpen] = useState(false);
+const [editableData, setEditableData] = useState<TData | null>(allowEdit ? null : null);  const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [currentImage, setCurrentImage] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"details" | "edit">("details");
-
+const [viewMode, setViewMode] = useState<"details" | "edit">(allowEdit ? "details" : "details");
   const handleInputChange = (key: string, value: unknown) => {
     if (editableData) {
       setEditableData({ ...editableData, [key]: value });
@@ -86,7 +84,7 @@ export function DataTable<TData extends DataWithId, TValue>({
 
   const confirmDelete = () => {
     if (!onDeleteAction) return;
-    if (deletePassword === "younes@") {
+    if (deletePassword === (selectedProduct?._id as string)) {
       onDeleteAction(selectedProduct?._id as string);
       setSelectedProduct(null);
       setIsDeleteDialogOpen(false);
@@ -148,25 +146,78 @@ export function DataTable<TData extends DataWithId, TValue>({
   });
 
   const handleRowClick = (rowData: TData, e: React.MouseEvent) => {
-    // Ignore clicks on interactive elements
-    if ((e.target as HTMLElement).closest('button, a, select, input, .no-row-click')) {
-      return;
-    }
-    
-    if (onRowClick) {
-      onRowClick(rowData);
-    } else {
-      setSelectedRow(rowData);
+  if ((e.target as HTMLElement).closest('button, a, select, input, .no-row-click')) {
+    return;
+  }
+  
+  if (onRowClick) {
+    onRowClick(rowData);
+  } else {
+    setSelectedRow(rowData);
+    if (allowEdit) {
       setEditableData(rowData);
-      setViewMode("details");
     }
-  };
+  }
+};
 
   const renderDefaultDetails = (data: TData) => {
     return (
       <div className="space-y-4">
         {Object.entries(data).map(([key, value]) => {
           if (key === "_id") return null;
+          
+          if (key === "images" && Array.isArray(value)) {
+            return (
+              <div key={key} className="grid grid-cols-3 gap-4">
+                <div className="col-span-1 font-medium text-gray-500 capitalize">
+                  {key.replace(/_/g, " ")}
+                </div>
+                <div className="col-span-2 flex flex-wrap gap-2">
+                  {value.map((imgSrc, index) => (
+                    <motion.div 
+                      key={index}
+                      whileHover={{ scale: 1.05 }}
+                      className="relative w-20 h-20"
+                    >
+                      <Image
+                        src={imgSrc as string}
+                        alt={`Image ${index + 1}`}
+                        fill
+                        className="object-cover rounded-lg border cursor-pointer"
+                        onClick={() => handleImageClick(imgSrc as string)}
+                        unoptimized={imgSrc.startsWith('blob:')}
+                      />
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            );
+          }
+          
+          if (key === "icon" && typeof value === "string") {
+            return (
+              <div key={key} className="grid grid-cols-3 gap-4">
+                <div className="col-span-1 font-medium text-gray-500 capitalize">
+                  {key.replace(/_/g, " ")}
+                </div>
+                <div className="col-span-2">
+                  <motion.div 
+                    whileHover={{ scale: 1.05 }}
+                    className="relative w-20 h-20"
+                  >
+                    <Image
+                      src={value}
+                      alt="Icon"
+                      fill
+                      className="object-cover rounded-lg border cursor-pointer"
+                      onClick={() => handleImageClick(value)}
+                      unoptimized={value.startsWith('blob:')}
+                    />
+                  </motion.div>
+                </div>
+              </div>
+            );
+          }
           
           return (
             <div key={key} className="grid grid-cols-3 gap-4">
@@ -195,16 +246,23 @@ export function DataTable<TData extends DataWithId, TValue>({
 
   return (
     <div className="py-5 px-4 md:px-6">
+      {/* Delete Confirmation Dialog */}
       {showActions && onDeleteAction && (
         <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Confirm Deletion</DialogTitle>
+              <DialogDescription>
+                This action cannot be undone. This will permanently delete the item.
+              </DialogDescription>
             </DialogHeader>
-            <div className="p-4">
-              <h1 className="text-lg font-semibold">
-                Do you really want to delete ?
-              </h1>
+            <div className="p-4 space-y-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <span className="text-sm font-medium text-gray-500">Product ID:</span>
+                <span className="col-span-3 text-sm font-mono p-2 bg-gray-100 rounded">
+                  {selectedProduct?._id as string}
+                </span>
+              </div>
               <Input
                 type="password"
                 placeholder="Enter your password"
@@ -213,18 +271,66 @@ export function DataTable<TData extends DataWithId, TValue>({
                 className="mt-4"
               />
               <div className="flex justify-end gap-2 mt-4">
-                <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsDeleteDialogOpen(false)}
+                >
                   Cancel
                 </Button>
-                <Button className="bg-red-600 text-white" onClick={confirmDelete}>
-                  Delete
-                </Button>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button 
+                    className="bg-red-600 text-white hover:bg-red-700" 
+                    onClick={confirmDelete}
+                  >
+                    Delete
+                  </Button>
+                </motion.div>
               </div>
             </div>
           </DialogContent>
         </Dialog>
       )}
 
+      {/* Image Preview Dialog */}
+      <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
+        <DialogContent className="max-w-[90vw] md:max-w-2xl">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="relative"
+          >
+            {currentImage && (
+              <div className="relative aspect-square w-full max-h-[80vh]">
+                <Image
+                  src={currentImage}
+                  alt="Enlarged preview"
+                  fill
+                  className="object-contain rounded-lg"
+                  unoptimized={currentImage.startsWith('blob:')}
+                />
+              </div>
+            )}
+            <div className="mt-4 flex justify-end gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setImageDialogOpen(false)}
+              >
+                Close
+              </Button>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button 
+                  variant="destructive"
+                  onClick={handleImageDelete}
+                >
+                  Delete Image
+                </Button>
+              </motion.div>
+            </div>
+          </motion.div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Search Input */}
       <div className="flex items-center py-4">
         <Input
           placeholder="Search..."
@@ -234,6 +340,7 @@ export function DataTable<TData extends DataWithId, TValue>({
         />
       </div>
 
+      {/* Table */}
       <div className="overflow-x-auto rounded-lg border shadow-sm">
         <Table className="w-full min-w-[600px]">
           <TableHeader className="bg-gray-50">
@@ -251,8 +358,10 @@ export function DataTable<TData extends DataWithId, TValue>({
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow
+                <motion.tr
                   key={row.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
                   className={`hover:bg-gray-50 ${(onRowClick || showActions) ? 'cursor-pointer' : ''}`}
                   onClick={(e) => handleRowClick(row.original, e)}
                 >
@@ -263,30 +372,38 @@ export function DataTable<TData extends DataWithId, TValue>({
                   ))}
                   {showActions && (
                     <TableCell className="flex space-x-2 py-3">
-                      {editLinkBase && (
-                        <Link 
-                          href={`${editLinkBase}/${row.original._id}`} 
-                          onClick={(e) => e.stopPropagation()}
-                          className="no-row-click"
-                        >
-                          <Pencil className="w-5 h-5 text-blue-600 hover:text-blue-800" />
-                        </Link>
-                      )}
-                      {onDeleteAction && (
-                        <Button
-                          variant="ghost"
-                          className="no-row-click hover:bg-red-50"
+                      {allowEdit && (
+                        <motion.button
                           onClick={(e) => {
                             e.stopPropagation();
+                            setSelectedRow(row.original);
+                            setEditableData(row.original);
+                            setViewMode("edit");
+                          }}
+                          className="no-row-click"
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                        >
+                          <Pencil className="w-5 h-5 text-blue-600 hover:text-blue-800" />
+                        </motion.button>
+                      )}
+                      {onDeleteAction && (
+                        <motion.button
+                          className="no-row-click hover:bg-red-50 p-1 rounded"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
                             handleDeleteClick(row.original);
                           }}
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
                         >
                           <Trash2 className="w-5 h-5 text-red-600 hover:text-red-800" />
-                        </Button>
+                        </motion.button>
                       )}
                     </TableCell>
                   )}
-                </TableRow>
+                </motion.tr>
               ))
             ) : (
               <TableRow>
@@ -300,211 +417,221 @@ export function DataTable<TData extends DataWithId, TValue>({
             )}
           </TableBody>
         </Table>
-        <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
-          <DialogContent className="max-w-[90vw]">
-            <div className="relative">
-              {currentImage && (
-                <div className="relative aspect-square w-full max-h-[80vh]">
-                  <Image
-                    src={currentImage}
-                    alt="Enlarged preview"
-                    fill
-                    className="object-contain rounded-lg"
-                    unoptimized={currentImage.startsWith('blob:')} // For blob URLs
-                  />
-                </div>
-              )}
-              <div className="mt-4 flex justify-end">
-                <Button variant="destructive" onClick={handleImageDelete}>
-                  Delete Image
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
 
+      {/* Pagination */}
       <div className="flex flex-wrap justify-center md:justify-end gap-2 py-4">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => table.previousPage()} 
-          disabled={!table.getCanPreviousPage()}
-        >
-          Previous
-        </Button>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => table.nextPage()} 
-          disabled={!table.getCanNextPage()}
-        >
-          Next
-        </Button>
+        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.previousPage()} 
+            disabled={!table.getCanPreviousPage()}
+          >
+            Previous
+          </Button>
+        </motion.div>
+        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.nextPage()} 
+            disabled={!table.getCanNextPage()}
+          >
+            Next
+          </Button>
+        </motion.div>
       </div>
 
+      {/* Details/Edit Dialog */}
       {selectedRow && (
         <Dialog open={!!selectedRow} onOpenChange={() => setSelectedRow(null)}>
-          <DialogContent className="sm:m-6 sm:max-w-sm md:max-w-2xl rounded-lg max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex justify-between items-center">
-                <span>{detailsTitle}</span>
-                {onUpdateAction && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setViewMode(viewMode === "details" ? "edit" : "details")}
-                  >
-                    {viewMode === "details" ? "Edit" : "View Details"}
-                  </Button>
-                )}
-              </DialogTitle>
-            </DialogHeader>
-            
-            {viewMode === "details" ? (
-              renderDetails ? renderDetails(selectedRow) : renderDefaultDetails(selectedRow)
-            ) : (
-              editableData && (
-                <>
-                  <div className="max-h-[70vh] overflow-y-auto">
-                    {Object.entries(editableData).map(([key, value]) =>
-                      key !== "_id" && (
-                        <div key={key} className="flex flex-col py-2">
-                          <label className="text-sm font-semibold capitalize break-words">
-                            {key.replace(/_/g, " ")}
-                          </label>
+          <DialogContent className="sm:m-6 sm:max-w-sm md:max-w-2xl lg:max-w-4xl rounded-lg max-h-[90vh] overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              <DialogHeader>
+                  <DialogTitle className="flex justify-between items-center">
+                    <span>{detailsTitle}</span>
+                    {allowEdit && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setViewMode(viewMode === "details" ? "edit" : "details")}
+                      >
+                        {viewMode === "details" ? "Edit" : "View Details"}
+                      </Button>
+                    )}
+                  </DialogTitle>
+                </DialogHeader>
               
-                          {key === "images" && Array.isArray(value) ? (
-                            <div className="flex flex-wrap gap-2">
-                              {value.map((imgSrc, index) => (
-                                <div key={index} className="relative">
-                                  <div className="relative w-20 h-20">
-                                    <Image
-                                      src={imgSrc as string}
-                                      alt={`Image ${index + 1}`}
-                                      fill
-                                      className="object-cover rounded-lg border"
-                                      onClick={() => handleImageClick(imgSrc as string)}
-                                      unoptimized={imgSrc.startsWith('blob:')}
-                                    />
-                                  </div>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="absolute top-1 right-1 p-1 bg-white rounded-full no-row-click"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleSpecificImageDelete(index);
-                                    }}
+              {!allowEdit || viewMode === "details" ? (
+                renderDetails ? renderDetails(selectedRow) : renderDefaultDetails(selectedRow)
+              ) : (
+                editableData && (
+                  <>
+                    <div className="max-h-[70vh] overflow-y-auto">
+                      {Object.entries(editableData).map(([key, value]) =>
+                        key !== "_id" && (
+                          <div key={key} className="flex flex-col py-2">
+                            <label className="text-sm font-semibold capitalize break-words">
+                              {key.replace(/_/g, " ")}
+                            </label>
+                
+                            {key === "images" && Array.isArray(value) ? (
+                              <div className="flex flex-wrap gap-2">
+                                {value.map((imgSrc, index) => (
+                                  <motion.div 
+                                    key={index} 
+                                    className="relative"
+                                    whileHover={{ scale: 1.05 }}
                                   >
-                                    <X className="w-4 h-4 text-red-500" />
-                                  </Button>
-                                </div>
-                              ))}
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  document.getElementById("image-input")?.click();
-                                }}
-                                className="h-20 w-20 flex items-center justify-center border border-dashed no-row-click"
-                              >
-                                Add Image
-                              </Button>
-                              <Input
-                                type="file"
-                                id="image-input"
-                                accept="image/*"
-                                multiple
-                                className="hidden"
-                                onChange={handleAddImage}
-                              />
-                            </div>
-                          ) : key === "icon" && typeof value === "string" ? (
-                            <div className="flex flex-col gap-2">
-                              {value ? (
-                                <div className="flex items-center gap-2">
-                                  <div className="relative w-20 h-20">
-                                    <Image
-                                      src={value}
-                                      alt="Icon"
-                                      fill
-                                      className="object-cover rounded-lg border cursor-pointer"
-                                      onClick={() => handleImageClick(value)}
-                                      unoptimized={value.startsWith('blob:')}
-                                    />
-                                  </div>
-                                  <Button
-                                    variant="destructive"
-                                    size="sm"
-                                    className="no-row-click"
-                                    onClick={handleIconDelete}
-                                  >
-                                    Delete Icon
-                                  </Button>
-                                </div>
-                              ) : (
-                                <div>
+                                    <div className="relative w-20 h-20">
+                                      <Image
+                                        src={imgSrc as string}
+                                        alt={`Image ${index + 1}`}
+                                        fill
+                                        className="object-cover rounded-lg border"
+                                        onClick={() => handleImageClick(imgSrc as string)}
+                                        unoptimized={imgSrc.startsWith('blob:')}
+                                      />
+                                    </div>
+                                    <motion.button
+                                      whileHover={{ scale: 1.1 }}
+                                      whileTap={{ scale: 0.9 }}
+                                      className="absolute top-1 right-1 p-1 bg-white rounded-full no-row-click"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleSpecificImageDelete(index);
+                                      }}
+                                    >
+                                      <X className="w-4 h-4 text-red-500" />
+                                    </motion.button>
+                                  </motion.div>
+                                ))}
+                                <motion.div
+                                  whileHover={{ scale: 1.05 }}
+                                  whileTap={{ scale: 0.95 }}
+                                >
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="no-row-click"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      document.getElementById("icon-input")?.click();
+                                      document.getElementById("image-input")?.click();
                                     }}
+                                    className="h-20 w-20 flex items-center justify-center border border-dashed no-row-click"
                                   >
-                                    Add Icon
+                                    Add Image
                                   </Button>
                                   <Input
                                     type="file"
-                                    id="icon-input"
+                                    id="image-input"
                                     accept="image/*"
+                                    multiple
                                     className="hidden"
-                                    onChange={handleAddIcon}
+                                    onChange={handleAddImage}
                                   />
-                                </div>
-                              )}
-                            </div>
-                          ) : key === "category" && typeof value === "object" && value !== null ? (
-                            <div className="text-sm text-gray-800 break-words">
-                              {"name" in value && typeof value.name === "string" ? value.name : "N/A"}
-                            </div>
-                          ) : typeof value === "object" && value !== null ? (
-                            <div className="text-sm text-gray-800 break-words">
-                              {Array.isArray(value) ? value.join(", ") : JSON.stringify(value)}
-                            </div>
-                          ) : (
-                            <Input
-                              value={String(value)}
-                              onChange={(e) => handleInputChange(key, e.target.value)}
-                              placeholder={key}
-                            />
-                          )}
-                        </div>
-                      )
-                    )}
-                  </div>
-                  <div className="flex justify-end gap-2 p-4">
-                    <Button variant="outline" onClick={() => setSelectedRow(null)}>
-                      Cancel
-                    </Button>
-                    {onDeleteAction && (
-                      <Button 
-                        variant="destructive" 
-                        onClick={() => onDeleteAction(selectedRow?._id as string)}
-                      >
-                        Delete
-                      </Button>
-                    )}
-                    <Button onClick={handleSave}>
-                      Save
-                    </Button>
-                  </div>
-                </>
-              )
-            )}
+                                </motion.div>
+                              </div>
+                            ) : key === "icon" && typeof value === "string" ? (
+                              <div className="flex flex-col gap-2">
+                                {value ? (
+                                  <div className="flex items-center gap-2">
+                                    <motion.div
+                                      whileHover={{ scale: 1.05 }}
+                                      className="relative w-20 h-20"
+                                    >
+                                      <Image
+                                        src={value}
+                                        alt="Icon"
+                                        fill
+                                        className="object-cover rounded-lg border cursor-pointer"
+                                        onClick={() => handleImageClick(value)}
+                                        unoptimized={value.startsWith('blob:')}
+                                      />
+                                    </motion.div>
+                                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                      <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        className="no-row-click"
+                                        onClick={handleIconDelete}
+                                      >
+                                        Delete Icon
+                                      </Button>
+                                    </motion.div>
+                                  </div>
+                                ) : (
+                                  <div>
+                                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="no-row-click"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          document.getElementById("icon-input")?.click();
+                                        }}
+                                      >
+                                        Add Icon
+                                      </Button>
+                                    </motion.div>
+                                    <Input
+                                      type="file"
+                                      id="icon-input"
+                                      accept="image/*"
+                                      className="hidden"
+                                      onChange={handleAddIcon}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            ) : typeof value === "object" && value !== null ? (
+                              <div className="text-sm text-gray-800 break-words">
+                                {Array.isArray(value) ? value.join(", ") : JSON.stringify(value)}
+                              </div>
+                            ) : (
+                              <Input
+                                value={String(value)}
+                                onChange={(e) => handleInputChange(key, e.target.value)}
+                                placeholder={key}
+                              />
+                            )}
+                          </div>
+                        )
+                      )}
+                    </div>
+                    <div className="flex justify-end gap-2 p-4">
+                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                        <Button variant="outline" onClick={() => setSelectedRow(null)}>
+                          Cancel
+                        </Button>
+                      </motion.div>
+                      {onDeleteAction && (
+                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                          <Button 
+                            variant="destructive" 
+                            onClick={() => {
+                              setSelectedRow(null);
+                              handleDeleteClick(selectedRow);
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        </motion.div>
+                      )}
+                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                        <Button onClick={handleSave}>
+                          Save
+                        </Button>
+                      </motion.div>
+                    </div>
+                  </>
+                )
+              )}
+            </motion.div>
           </DialogContent>
         </Dialog>
       )}

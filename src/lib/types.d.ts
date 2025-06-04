@@ -36,17 +36,23 @@ type ProductType = {
 };
 
 type UserType = {
-    id: string
-    username: string
-    email?: string
-    wishlist?: string[]
-    createdAt: string
-    updatedAt: string
-  }
-  
+    username: string;
+    email: string;
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    address?: string;
+    city?: string;
+    country?: string;
+    postalCode?: string;
+    wishlist?: string[];
+    orders?: string[];
+    createdAt: string;
+    updatedAt: string;
+    }
 
 type OrderItem = {
-    product: ProductType[];
+    product: ProductType| ProductType[];
     quantity: number;
     color: string;
     size: string;
@@ -60,7 +66,9 @@ type OrderType = {
     lastname?: string;
     orderitems: OrderItem[];  // Changed from tuple [OrderItem] to an array of OrderItem
     adress: string;           // Changed from "String" to "string"
-    city: string;             // Changed from "String" to "string"
+    city: string;   
+    wilaya?: string;
+        commune?: string;          // Changed from "String" to "string"
     postalcode: string;       // Changed from "String" to "string"
     phonenumber: string;      // Changed from "String" to "string"
    status: OrderStatus;

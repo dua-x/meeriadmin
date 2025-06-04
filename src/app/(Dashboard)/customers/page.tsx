@@ -9,51 +9,73 @@ interface DataWithId {
     [key: string]: unknown;
 }
 
+interface UserType extends DataWithId {
+    username: string;
+    email: string;
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    address?: string;
+    city?: string;
+    country?: string;
+    postalCode?: string;
+    wishlist?: string[];
+    orders?: string[];
+    createdAt: string;
+    updatedAt: string;
+}
+
 export default function Customers() {
-    const [customers, setCustomers] = useState<User[]>([]);
-   
+    const [customers, setCustomers] = useState<UserType[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
     useEffect(() => {
-        const token = localStorage.getItem("authtoken");
-        
-        axios.post(process.env.NEXT_PUBLIC_IPHOST + "/StoreAPI/users/userGET", {
-            query: `
-                query {
-                    usersGET {
-                        _id
-                        username
-                        email
-                        createdAt
+        const fetchCustomers = async () => {
+            try {
+                setLoading(true);
+                const token = localStorage.getItem("authtoken");
+                if (!token) throw new Error("Authentication token not found");
+
+                const response = await axios.post(
+                    process.env.NEXT_PUBLIC_IPHOST + "/StoreAPI/users/userGET",
+                    {
+                        query: `
+                            query {
+                                usersGET {
+                                    _id
+                                    username
+                                    email
+                                    createdAt
+                                }
+                            }
+                        `,
+                    },
+                    {
+                        headers: {
+                            "Content-Type": "application/json",
+                            Authorization: `Bearer ${token}`,
+                        },
                     }
+                );
+
+                if (response.data?.data?.usersGET) {
+                    setCustomers(response.data.data.usersGET);
+                } else {
+                    throw new Error("Unexpected response structure");
                 }
-            `,
-        }, {
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-        })
-        .then((response) => {
-            if (response.data?.data?.usersGET) {
-                setCustomers(response.data.data.usersGET);
-            } else {
-                console.error("Unexpected response structure");
+            } catch (error) {
+                console.error("Error fetching customers:", error);
+                setError("Failed to load customers. Please try again later.");
+            } finally {
+                setLoading(false);
             }
-        })
-        .catch((error) => {
-            console.error("Error fetching customers:", error);
-        });
+        };
+
+        fetchCustomers();
     }, []);
 
-    // Define the data type
-    interface User extends DataWithId {
-        username: string;
-        email: string;
-        createdAt: string;
-        updatedAt: string;
-    }
-
-    // Define your columns
-    const columns: ColumnDef<DataWithId, unknown>[] = [
+    const columns: ColumnDef<UserType>[] = [
         {
             accessorKey: "username",
             header: "Username",
@@ -64,14 +86,12 @@ export default function Customers() {
             header: "Email",
             cell: (info) => info.getValue() || "N/A",
         },
-     
         {
             accessorKey: "createdAt",
             header: "Join Date",
             cell: (info) => {
                 const dateStr = info.getValue() as string;
-                const date = new Date(dateStr);
-                return date.toLocaleDateString('en-US', {
+                return new Date(dateStr).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'short',
                     day: 'numeric'
@@ -81,8 +101,11 @@ export default function Customers() {
     ];
 
     const handleDeleteCustomer = async (id: string) => {
+        if (!confirm("Are you sure you want to delete this customer?")) return;
+
         try {
             const token = localStorage.getItem("authtoken");
+            if (!token) throw new Error("Authentication token not found");
 
             await axios.post(
                 `${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/users/userPOST`,
@@ -91,7 +114,7 @@ export default function Customers() {
                         mutation {
                             userDELETE(input: {
                                 userId: "${id}"
-                                password: "younes@"
+                                password: "${id}"
                             }) {
                                 message
                             }
@@ -106,7 +129,6 @@ export default function Customers() {
                 }
             );
 
-            alert("Customer deleted successfully!");
             setCustomers((prev) => prev.filter((customer) => customer._id !== id));
         } catch (error) {
             console.error("Error deleting customer:", error);
@@ -114,34 +136,29 @@ export default function Customers() {
         }
     };
 
-    const handleUpdateCustomerAction = async (updatedData: DataWithId) => {
+    const handleUpdateCustomerAction = async (updatedData: UserType) => {
         try {
             const token = localStorage.getItem("authtoken");
+            if (!token) throw new Error("Authentication token not found");
 
-            // Find the original customer from the state
-            const originalCustomer = customers.find((customer) => customer._id === updatedData._id);
+            const originalCustomer = customers.find((c) => c._id === updatedData._id);
             if (!originalCustomer) {
                 alert("Customer not found!");
                 return;
             }
 
-            // Create an object to hold only the changed fields
-            const changes: Partial<DataWithId> = {};
-
-            // Compare each field and add to `changes` if it's different
+            const changes: Partial<UserType> = {};
             Object.keys(updatedData).forEach((key) => {
                 if (updatedData[key] !== originalCustomer[key]) {
                     changes[key] = updatedData[key];
                 }
             });
 
-            // If no changes were made, exit early
             if (Object.keys(changes).length === 0) {
                 alert("No changes were made.");
                 return;
             }
 
-            // Send the PUT request with only the changed fields
             const response = await axios.put(
                 `${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/users/editUser/${updatedData._id}`,
                 changes,
@@ -154,7 +171,6 @@ export default function Customers() {
             );
 
             if (response.status === 200) {
-                // Update the local state with the updated customer
                 setCustomers((prev) =>
                     prev.map((item) =>
                         item._id === updatedData._id ? { ...item, ...changes } : item
@@ -168,25 +184,46 @@ export default function Customers() {
         }
     };
 
+    if (loading) {
+        return (
+            <div className="fixed inset-0 flex flex-col items-center justify-center bg-white z-50">
+                <div className="relative w-24 h-24 flex items-center justify-center">
+                    <div className="absolute w-24 h-24 border-4 border-[#C4A484] border-t-transparent rounded-full animate-spin"></div>
+                    <div className="absolute w-16 h-16 border-4 border-[#857B74] border-t-transparent rounded-full animate-spin-slow"></div>
+                    <span className="text-[#C4A484] font-bold text-2xl tracking-wide">M</span>
+                </div>
+                <p className="mt-6 text-[#857B74] text-lg font-semibold tracking-wide">
+                    Elevating Your Style at
+                    <span className="text-[#C4A484] font-bold"> Merri Store</span>...
+                </p>
+                <p className="mt-2 text-sm text-gray-500 opacity-80 animate-fade-in">
+                    Just a moment, fashion takes time.
+                </p>
+            </div>
+        );
+    }
+
+    if (error) return <div className="p-8 text-red-500">{error}</div>;
+
     return (
-        <div className="px-4 py-6 md:px-8 md:py-10 xl:mx-10">
-      <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-[#857B74] drop-shadow-lg mb-2">
-                        Customer Management
-      </h1>
-                   
-                    <p className="text-sm text-gray-500 mt-1">
-                        {customers.length} registered customers
-                    </p>
-      
-                
-            <DataTable<DataWithId, unknown>
-                columns={columns as ColumnDef<DataWithId, unknown>[]}
+        <div className="p-4 md:p-8">
+            <div className="flex items-center justify-between mb-8">
+                <h1 className="text-3xl font-bold text-[#857B74]">
+                    Customers
+                </h1>
+                <p className="text-sm text-gray-500">
+                    {customers.length} registered customers
+                </p>
+            </div>
+            
+            <DataTable<UserType, unknown>
+                columns={columns}
                 data={customers}
                 searchKey="username"
-                editLinkBase="/customers/edit"
                 onDeleteAction={handleDeleteCustomer}
                 onUpdateAction={handleUpdateCustomerAction}
                 showActions={false}
+                allowEdit={false}
             />
         </div>
     );

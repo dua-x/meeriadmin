@@ -146,7 +146,6 @@ const CollectionsPage = () => {
                 columns={columns as ColumnDef<DataWithId, unknown>[]}
                 data={categories}
                 searchKey="name"
-                editLinkBase="/collections/edit"
                 onDeleteAction={handleDeleteCollectionAction}
                 onUpdateAction={handleUpdateCollectionAction}
 

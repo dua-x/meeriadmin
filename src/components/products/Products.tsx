@@ -89,7 +89,7 @@ export default function Products() {
                         mutation {
                             productDELETE(input: {
                                 productId: "${id}"
-                                password: "younes@"
+                                password: "${id}"
                             }) {
                                 message
                             }
@@ -185,7 +185,6 @@ export default function Products() {
                 columns={columns as ColumnDef<DataWithId, unknown>[]}
                 data={products}
                 searchKey="name"
-                editLinkBase="/collections/edit"
                 onDeleteAction={handleDeleteProduct}
                 onUpdateAction={handleUpdateProductAction}
             />
