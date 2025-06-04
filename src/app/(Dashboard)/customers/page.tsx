@@ -207,10 +207,11 @@ export default function Customers() {
 
     return (
         <div className="p-4 md:p-8">
-            <div className="flex items-center justify-between mb-8">
-                <h1 className="text-3xl font-bold text-[#857B74]">
+            <div className=" items-center justify-between mb-8">
+                <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-[#857B74] drop-shadow-lg mb-2">
                     Customers
                 </h1>
+                
                 <p className="text-sm text-gray-500">
                     {customers.length} registered customers
                 </p>
