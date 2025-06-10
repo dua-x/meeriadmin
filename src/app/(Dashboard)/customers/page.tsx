@@ -23,6 +23,7 @@ interface UserType extends DataWithId {
     orders?: string[];
     createdAt: string;
     updatedAt: string;
+    isModerator :boolean;
 }
 
 export default function Customers() {
@@ -47,6 +48,8 @@ export default function Customers() {
                                     username
                                     email
                                     createdAt
+                                    isModerator
+                                    adresse
                                 }
                             }
                         `,
@@ -86,6 +89,11 @@ export default function Customers() {
             header: "Email",
             cell: (info) => info.getValue() || "N/A",
         },
+                {
+            accessorKey: "adresse",
+            header: "Adresse",
+            cell: (info) => info.getValue() || "N/A",
+        },
         {
             accessorKey: "createdAt",
             header: "Join Date",
@@ -98,6 +106,51 @@ export default function Customers() {
                 });
             },
         },
+         {
+    accessorKey: "isModerator",
+    header: "Moderator",
+    cell: (info) => {
+        const [isModerator, setIsModerator] = useState(info.getValue() as boolean);
+        const row = info.row.original;
+
+        const handleToggle = async () => {
+            const newValue = !isModerator;
+            setIsModerator(newValue);
+            
+            try {
+                await handleUpdateCustomerAction({
+                    ...row,
+                    isModerator: newValue
+                });
+            } catch (error) {
+                setIsModerator(!newValue); // Revert if failed
+            }
+        };
+
+        return (
+            <div className="flex items-center">
+                <button
+                    type="button"
+                    onClick={handleToggle}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                        isModerator ? 'bg-blue-500' : 'bg-gray-300'
+                    }`}
+                >
+                    <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            isModerator ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                    />
+                </button>
+                <span className={`ml-2 text-xs font-medium ${
+                    isModerator ? 'text-blue-800' : 'text-gray-600'
+                }`}>
+                    {isModerator ? 'Yes' : 'No'}
+                </span>
+            </div>
+        );
+    },
+}
     ];
 
     const handleDeleteCustomer = async (id: string) => {
