@@ -7,7 +7,6 @@ import { Plus } from "lucide-react";
 import { DataTable } from "@/components/custom ui/DataTable";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
-
 // Define DataWithId manually
 interface DataWithId {
     _id: string;
@@ -126,27 +125,30 @@ const CollectionsPage = () => {
 
     return (
         <div>
-            <div className="flex items-center px-8 py-10 xl:mx-10 justify-between">
-                <h1 className="lg:text-4xl text-3xl font-bold text-[#857B74] drop-shadow-lg">
+            <div className=" items-center px-8 py-10 xl:mx-10">
+                <div className="flex  justify-between">
+                    <h1 className="lg:text-4xl text-3xl font-bold text-[#857B74] drop-shadow-lg">
                     Collections
-                </h1>
+                    </h1>
 
-                <Button
-                    className="btn-primary hover:bg-custom-beige"
-                    onClick={() => router.push("/collections/new")}
-                >
-                    <Plus className="h-4 w-4 mr-2" />
-                    new collection
-                </Button>
+                    <Button
+                        className="btn-primary hover:bg-custom-beige"
+                        onClick={() => router.push("/collections/new")}
+                    >
+                        <Plus className="h-4 w-4 mr-2" />
+                        new collection
+                    </Button>
+                </div>
+                 <p className="text-sm text-gray-500">
+                    {categories.length} collections registered
+                </p>
+
             </div>
-
-
 
             <DataTable<DataWithId, unknown>
                 columns={columns as ColumnDef<DataWithId, unknown>[]}
                 data={categories}
                 searchKey="name"
-                editLinkBase="/collections/edit"
                 onDeleteAction={handleDeleteCollectionAction}
                 onUpdateAction={handleUpdateCollectionAction}
 

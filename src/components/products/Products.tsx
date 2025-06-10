@@ -89,7 +89,7 @@ export default function Products() {
                         mutation {
                             productDELETE(input: {
                                 productId: "${id}"
-                                password: "younes@"
+                                password: "${id}"
                             }) {
                                 message
                             }
@@ -168,12 +168,13 @@ export default function Products() {
 
     return (
         <div>
-            <div className="flex items-center px-8 py-10 xl:mx-10 justify-between">
+               <div className=" items-center px-8 py-10 xl:mx-10">
+                <div className="flex  justify-between">
                 <h1 className="lg:text-4xl text-3xl font-bold text-[#857B74] drop-shadow-lg">
                     Products
                 </h1>
 
-                <Button
+             <Button
                     className="btn-primary hover:bg-custom-beige"
                     onClick={() => router.push("/products/newproduct")}
                 >
@@ -181,11 +182,14 @@ export default function Products() {
                     new product
                 </Button>
             </div>
+              <p className="text-sm text-gray-500">
+                    {products.length} registered products
+                </p>
+                </div>
             <DataTable<DataWithId, unknown>
                 columns={columns as ColumnDef<DataWithId, unknown>[]}
                 data={products}
                 searchKey="name"
-                editLinkBase="/collections/edit"
                 onDeleteAction={handleDeleteProduct}
                 onUpdateAction={handleUpdateProductAction}
             />
