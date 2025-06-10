@@ -106,26 +106,26 @@ export default function Customers() {
                 });
             },
         },
-         {
+        {
     accessorKey: "isModerator",
     header: "Moderator",
     cell: (info) => {
-        const [isModerator, setIsModerator] = useState(info.getValue() as boolean);
+        const isModerator = info.getValue() as boolean;
         const row = info.row.original;
 
         const handleToggle = async () => {
-            const newValue = !isModerator;
-            setIsModerator(newValue);
-            
-            try {
-                await handleUpdateCustomerAction({
-                    ...row,
-                    isModerator: newValue
-                });
-            } catch (error) {
-                setIsModerator(!newValue); // Revert if failed
-            }
-        };
+    const newValue = !isModerator;
+    
+    try {
+        await handleUpdateCustomerAction({
+            ...row,
+            isModerator: newValue
+        });
+    } catch (error) {
+        console.error("Failed to update moderator status:", error);
+        
+    }
+};
 
         return (
             <div className="flex items-center">
