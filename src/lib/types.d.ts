@@ -9,13 +9,14 @@ type CollectionType = {
     updatedAt: string;
 };
 
+type SizeType = {
+  size: string | number;
+  stock: number;
+};
 
 type ProductDetailType = {
-    color: string;
-    sizes: {
-        size: number;
-        stock: number;
-    }[];
+  color: string;
+  sizes: SizeType[];
 };
 
 type ProductType = {

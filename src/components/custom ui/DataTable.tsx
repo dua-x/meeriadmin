@@ -1,8 +1,11 @@
 'use client';
 import { useState } from "react";
 import Image from "next/image";
+import { ProductDetailsMiniTable } from "@/components/ui/ProductDetailsEditor";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Pencil, Trash2, X } from "lucide-react";
+import { Switch } from "@/components/ui/Switch";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -20,7 +23,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Input } from "../ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { motion } from "framer-motion";
 
@@ -467,7 +469,9 @@ const [viewMode, setViewMode] = useState<"details" | "edit">(allowEdit ? "detail
                 </DialogHeader>
               
               {!allowEdit || viewMode === "details" ? (
-                renderDetails ? renderDetails(selectedRow) : renderDefaultDetails(selectedRow)
+                <>
+                  {renderDetails ? renderDetails(selectedRow) : renderDefaultDetails(selectedRow)}
+                </>
               ) : (
                 editableData && (
                   <>
@@ -479,7 +483,29 @@ const [viewMode, setViewMode] = useState<"details" | "edit">(allowEdit ? "detail
                               {key.replace(/_/g, " ")}
                             </label>
                 
-                            {key === "images" && Array.isArray(value) ? (
+                            {key === "richDescription" ? (
+                            <textarea
+                              className="border border-gray-300 rounded-md px-3 py-2 text-sm w-full"
+                              value={String(value)}
+                              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                                handleInputChange(key, e.target.value)
+                              }
+                              rows={4}
+                            />
+                          ) : key === "IsFeatured" ? (
+                            <div className="flex items-center gap-2">
+                              <Switch
+                                checked={Boolean(value)}
+                                onCheckedChange={(checked: boolean) => handleInputChange(key, checked)}
+                              />
+                              <span className="text-sm">{value ? "On" : "Off"}</span>
+                            </div>
+                          ) : key === "productdetail" ? (
+                            <ProductDetailsMiniTable
+                              value={value as ProductDetailType[]}
+                              onChange={(updated: ProductDetailType[]) => handleInputChange(key, updated)}
+                            />
+                          ) : key === "images" && Array.isArray(value) ? (
                               <div className="flex flex-wrap gap-2">
                                 {value.map((imgSrc, index) => (
                                   <motion.div 

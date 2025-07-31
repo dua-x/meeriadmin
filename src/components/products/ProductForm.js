@@ -12,7 +12,6 @@ export default function ProductForm({ initialData }) {
     const [richDescription, setRichDescription] = useState('');
     const [Price, setPrice] = useState('');
     const [category, setCategory] = useState('');
-    const [CountINStock, setCountINStock] = useState('');
     const [brand, setBrand] = useState('');
     const [IsFeatured, setIsFeatured] = useState(false);
     const [images, setImages] = useState([]);
@@ -25,6 +24,20 @@ export default function ProductForm({ initialData }) {
     const [zoom, setZoom] = useState(1);
     const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
     const [selectedImageIndex, setSelectedImageIndex] = useState(null);
+    const calculateTotalStock = useCallback(() => {
+        return productdetail.reduce((total, variant) => {
+            return total + variant.sizes.reduce((sum, size) => {
+                return sum + (parseInt(size.stock) || 0);
+            }, 0);
+        }, 0);
+    }, [productdetail]);
+
+
+    const [CountINStock, setCountINStock] = useState(calculateTotalStock());
+     useEffect(() => {
+        setCountINStock(calculateTotalStock());
+    }, [productdetail, calculateTotalStock]);
+
     useEffect(() => {
         if (initialData) {
             setName(initialData.name || '');
@@ -323,15 +336,12 @@ export default function ProductForm({ initialData }) {
                             ))}
                         </select>
                     </div>
-                    <div className="form-row mb-3">
-                        <label>Count In Stock</label>
-                        <input
-                            className="form-input"
-                            type="number"
-                            value={CountINStock}
-                            onChange={(e) => setCountINStock(e.target.value)}
-                        />
-                    </div>
+                     <div className="form-row mb-3">
+            <label>Total Stock Count</label>
+            <div className="p-2 bg-gray-100 rounded-md">
+                {CountINStock} (automatically calculated from variants)
+            </div>
+        </div>
                     <div className="form-row mb-3">
                         <label>Brand</label>
                         <input className="form-input" type="text" value={brand} onChange={(e) => setBrand(e.target.value)} />
