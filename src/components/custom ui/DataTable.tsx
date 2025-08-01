@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { motion } from "framer-motion";
+import { ComboBox } from "@/components/ui/select"; // adjust the path to match your project structure
 
 interface DataWithId {
   _id: string;
@@ -42,6 +43,8 @@ interface DataTableProps<TData extends DataWithId, TValue> {
   detailsTitle?: string;
   renderDetails?: (data: TData) => React.ReactNode;
   allowEdit?: boolean; // Add this new prop
+  categories?: { _id: string; name: string }[]; // ✅ add this
+
 }
 
 export function DataTable<TData extends DataWithId, TValue>({
@@ -64,7 +67,10 @@ export function DataTable<TData extends DataWithId, TValue>({
 const [editableData, setEditableData] = useState<TData | null>(allowEdit ? null : null);  const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [currentImage, setCurrentImage] = useState<string | null>(null);
 const [viewMode, setViewMode] = useState<"details" | "edit">(allowEdit ? "details" : "details");
-  const handleInputChange = (key: string, value: unknown) => {
+
+const [categories, setCategories] = useState<{ _id: string; name: string }[]>([]);
+ 
+const handleInputChange = (key: string, value: unknown) => {
     if (editableData) {
       setEditableData({ ...editableData, [key]: value });
     }
@@ -205,7 +211,7 @@ const [viewMode, setViewMode] = useState<"details" | "edit">(allowEdit ? "detail
                 <div className="col-span-2">
                   <motion.div 
                     whileHover={{ scale: 1.05 }}
-                    className="relative w-20 h-20"
+                    className="relative w-20 aspect-[3/4]"
                   >
                     <Image
                       src={value}
@@ -500,6 +506,16 @@ const [viewMode, setViewMode] = useState<"details" | "edit">(allowEdit ? "detail
                               />
                               <span className="text-sm">{value ? "On" : "Off"}</span>
                             </div>
+                          ) : key === "category" ? (
+                           <ComboBox
+                              value={String(value)}
+                              onChange={(val: string) => handleInputChange(key, val)}
+                              options={categories.map((cat: { _id: string; name: string }) => ({
+                                label: cat.name,
+                                value: cat._id,
+                              }))}
+                              placeholder="Select category"
+                            />
                           ) : key === "productdetail" ? (
                             <ProductDetailsMiniTable
                               value={value as ProductDetailType[]}
@@ -513,12 +529,12 @@ const [viewMode, setViewMode] = useState<"details" | "edit">(allowEdit ? "detail
                                     className="relative"
                                     whileHover={{ scale: 1.05 }}
                                   >
-                                    <div className="relative w-20 h-20">
+                                    <div className="relative w-20 aspect-[3/4]">
                                       <Image
                                         src={imgSrc as string}
                                         alt={`Image ${index + 1}`}
                                         fill
-                                        className="object-cover rounded-lg border"
+                                        className=" object-cover rounded-lg border"
                                         onClick={() => handleImageClick(imgSrc as string)}
                                         unoptimized={imgSrc.startsWith('blob:')}
                                       />
@@ -567,7 +583,7 @@ const [viewMode, setViewMode] = useState<"details" | "edit">(allowEdit ? "detail
                                   <div className="flex items-center gap-2">
                                     <motion.div
                                       whileHover={{ scale: 1.05 }}
-                                      className="relative w-20 h-20"
+                                      className="relative w-20 aspect-[3/4]"
                                     >
                                       <Image
                                         src={value}

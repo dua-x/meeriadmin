@@ -8,6 +8,10 @@ import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 
 import axios from "axios";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { motion } from "framer-motion";
+
+
 
 interface DataWithId {
     _id: string;
@@ -16,7 +20,36 @@ interface DataWithId {
 
 export default function Products() {
 const [products, setProducts] = useState<Article[]>([]);
-    const router = useRouter();
+const router = useRouter();
+const [imageDialogOpen, setImageDialogOpen] = useState(false);
+const [currentImage, setCurrentImage] = useState<string | null>(null);
+const [categories, setCategories] = useState<{ _id: string; name: string }[]>([]);
+
+const handleImageDelete = () => {
+  if (!currentImage) return;
+  alert(`You can delete image: ${currentImage}`);
+  setImageDialogOpen(false);
+};
+
+    useEffect(() => {
+  axios
+    .post(process.env.NEXT_PUBLIC_IPHOST + "/StoreAPI/categories/categoryGET", {
+      query: `
+        query {
+          categoryGET {
+            _id
+            name
+          }
+        }
+      `,
+    })
+    .then((response) => {
+      setCategories(response.data.data.categoryGET);
+    })
+    .catch((error) => {
+      console.error("Error fetching categories:", error);
+    });
+}, []);
 
     useEffect(() => {
         axios
@@ -81,6 +114,24 @@ interface Article extends DataWithId {
     // Define your columns
 const columns: ColumnDef<DataWithId, unknown>[] = [
   {
+  header: "Image",
+  accessorFn: (row) => (row as Article).images?.[0] ?? "",
+  cell: ({ getValue }) => {
+    const img = getValue() as string;
+    return img ? (
+      <Image
+        src={img}
+        alt="Thumbnail"
+        className="object-cover rounded"
+        width={50}
+        height={50}
+      />
+    ) : (
+      <span className="text-sm text-gray-400">No image</span>
+    );
+  },
+},
+{
     accessorKey: "name",
     header: "Name",
   },
@@ -160,7 +211,7 @@ const columns: ColumnDef<DataWithId, unknown>[] = [
             <div>
                 <strong>Images:</strong>
                 {Array.isArray(detail.images) && detail.images.length > 0 ? (
-                    <div className="mt-2 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                     <div className="relative relative w-20 aspect-[3/4] rounded border cursor-pointer overflow-hidden">
                     {detail.images.map((img, i) => (
                         <Image
                         key={i}
@@ -168,14 +219,48 @@ const columns: ColumnDef<DataWithId, unknown>[] = [
                         alt={`Product image ${i + 1}`}
                         width={300}
                         height={200}
-                        className="w-full h-32 object-cover rounded border"
+                        className="w-full h-32 object-cover rounded border cursor-pointer"
+                        onClick={() => {
+                            setCurrentImage(img);
+                            setImageDialogOpen(true);
+                        }}
                         />
                     ))}
                     </div>
                 ) : (
                     <p>No images available</p>
                 )}
-            </div>
+
+                {/* Image Preview Dialog */}
+                <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
+                    <DialogContent className="max-w-[90vw] md:max-w-2xl">
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="relative">
+                        {currentImage && (
+                        <div className="relative aspect-square w-full max-h-[80vh]">
+                            <Image
+                            src={currentImage}
+                            alt="Enlarged preview"
+                            fill
+                            className="object-contain rounded-lg"
+                            unoptimized={currentImage.startsWith("blob:")}
+                            />
+                        </div>
+                        )}
+                        <div className="mt-4 flex justify-end gap-2">
+                        <Button variant="outline" onClick={() => setImageDialogOpen(false)}>
+                            Close
+                        </Button>
+                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                            <Button variant="destructive" onClick={handleImageDelete}>
+                            Delete Image
+                            </Button>
+                        </motion.div>
+                        </div>
+                    </motion.div>
+                    </DialogContent>
+                </Dialog>
+                </div>
+
             <p><strong>Price:</strong> {detail.Price}</p>
             <p><strong>Category:</strong> {detail.category?.name || "N/A"}</p>
             <p><strong>Created At:</strong> {new Date(detail.createdAt).toLocaleString()}</p>
@@ -232,6 +317,9 @@ const handleUpdateProductAction = async (updatedData: DataWithId) => {
                     product {
                         _id
                         name
+                        category {
+                                name
+                            }
                         Price
                         CountINStock
                     }
@@ -300,13 +388,17 @@ const handleUpdateProductAction = async (updatedData: DataWithId) => {
                     {products.length} registered products
                 </p>
                 </div>
-            <DataTable<DataWithId, unknown>
+           <DataTable<DataWithId, unknown>
                 columns={columns}
                 data={products}
                 searchKey="name"
                 onDeleteAction={handleDeleteProduct}
                 onUpdateAction={handleUpdateProductAction}
-            />
+                renderDetails={renderProductDetails}
+                categories={categories} // ✅ pass this down
+                />
+
         </div>
     );
 }
+
