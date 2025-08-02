@@ -23,34 +23,57 @@ const [products, setProducts] = useState<Article[]>([]);
 const router = useRouter();
 const [imageDialogOpen, setImageDialogOpen] = useState(false);
 const [currentImage, setCurrentImage] = useState<string | null>(null);
-const [categories, setCategories] = useState<{ _id: string; name: string }[]>([]);
+const [categories, setCategories] = useState<CollectionType[]>([]);
 
 const handleImageDelete = () => {
   if (!currentImage) return;
   alert(`You can delete image: ${currentImage}`);
   setImageDialogOpen(false);
 };
-
-    useEffect(() => {
-  axios
-    .post(process.env.NEXT_PUBLIC_IPHOST + "/StoreAPI/categories/categoryGET", {
-      query: `
-        query {
-          categoryGET {
-            _id
-            name
-          }
+const [isLoadingCategories, setIsLoadingCategories] = useState(false);
+useEffect(() => {
+  const fetchCategories = async () => {
+    setIsLoadingCategories(true);
+    try {
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_IPHOST ?? ""}/StoreAPI/categories/categoryGET`,
+        {
+          query: `
+            query {
+              CategoryGET {
+                _id
+                name
+                description
+                icon
+                typestore
+              }
+            }
+          `
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
         }
-      `,
-    })
-    .then((response) => {
-      setCategories(response.data.data.categoryGET);
-    })
-    .catch((error) => {
-      console.error("Error fetching categories:", error);
-    });
-}, []);
+      );
 
+      console.log("🟢 Response:", response.data);
+
+      if (response.data?.data?.CategoryGET) {
+        setCategories(response.data.data.CategoryGET);
+      } else {
+        console.error("❌ Unexpected structure", response.data);
+        setCategories([]);
+      }
+    } catch (error) {
+      console.error("❌ Failed to fetch categories:", error);
+      setCategories([]);
+    } finally {
+      setIsLoadingCategories(false);
+    }
+  };
+  fetchCategories();
+}, []);
     useEffect(() => {
         axios
             .post(process.env.NEXT_PUBLIC_IPHOST + "/StoreAPI/products/productGET", {
@@ -290,81 +313,88 @@ const columns: ColumnDef<DataWithId, unknown>[] = [
         };
 
 const handleUpdateProductAction = async (updatedData: DataWithId) => {
-    try {
-        const token = localStorage.getItem("authtoken");
-
-        const originalProduct = products.find((product) => product._id === updatedData._id);
-        if (!originalProduct) {
-            alert("Product not found!");
-            return;
-        }
-
-        const changes: Partial<DataWithId> = {};
-        Object.keys(updatedData).forEach((key) => {
-            if (updatedData[key] !== originalProduct[key]) {
-                changes[key] = updatedData[key];
-            }
-        });
-
-        if (Object.keys(changes).length === 0) {
-            alert("No changes were made.");
-            return;
-        }
-
-        const query = `
-            mutation UpdateProduct($input: ProductUpdateInput!) {
-                productUpdate(input: $input) {
-                    product {
-                        _id
-                        name
-                        category {
-                                name
-                            }
-                        Price
-                        CountINStock
-                    }
-                    message
-                }
-            }
-        `;
-
-        const variables = {
-            input: {
-                _id: updatedData._id,
-                updates: changes,
-            },
-        };
-
-        const response = await axios.post(
-            `${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/products/productPOST`,
-            {
-                query,
-                variables,
-            },
-            {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                },
-            }
-        );
-
-        const result = response.data.data.productUpdate;
-        if (result.product) {
-            setProducts((prev) =>
-                prev.map((item) =>
-                    item._id === updatedData._id ? { ...item, ...changes } : item
-                )
-            );
-            alert(result.message || "Product updated successfully!");
-        } else {
-            alert(result.message || "Update failed.");
-        }
-
-    } catch (error) {
-        console.error("Error updating product:", error);
-        alert("Failed to update the product. Please try again.");
+  try {
+    const token = localStorage.getItem("authtoken");
+    const originalProduct = products.find((product) => product._id === updatedData._id);
+    
+    if (!originalProduct) {
+      alert("Product not found!");
+      return;
     }
+
+    // Prepare the update data
+    const updateData: any = {
+      _id: updatedData._id,
+      updates: {}
+    };
+
+    // Check for changes in each field
+    Object.keys(updatedData).forEach((key) => {
+      if (JSON.stringify(updatedData[key]) !== JSON.stringify(originalProduct[key])) {
+        // Handle category specially - send only ID
+        if (key === "category") {
+          updateData.updates[key] = typeof updatedData[key] === 'object' 
+            ? (updatedData[key] as any)._id 
+            : updatedData[key];
+        } else {
+          updateData.updates[key] = updatedData[key];
+        }
+      }
+    });
+
+    if (Object.keys(updateData.updates).length === 0) {
+      alert("No changes were made.");
+      return;
+    }
+
+    const response = await axios.post(
+      `${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/products/productPOST`,
+      {
+        query: `
+          mutation UpdateProduct($input: ProductUpdateInput!) {
+            productUpdate(input: $input) {
+              product {
+                _id
+                name
+                category
+                Price
+                CountInStock
+              }
+              message
+            }
+          }
+        `,
+        variables: {
+          input: updateData
+        }
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    if (response.data.errors) {
+      throw new Error(response.data.errors[0].message);
+    }
+
+    const result = response.data.data.productUpdate;
+    if (result.product) {
+      setProducts((prev) =>
+        prev.map((item) =>
+          item._id === updatedData._id ? { ...item, ...updateData.updates } : item
+        )
+      );
+      alert(result.message || "Product updated successfully!");
+    } else {
+      alert("Update failed.");
+    }
+  } catch (error) {
+    console.error("Error updating product:", error);
+    alert("Failed to update the product. Please try again.");
+  }
 };
 
 
@@ -396,6 +426,7 @@ const handleUpdateProductAction = async (updatedData: DataWithId) => {
                 onUpdateAction={handleUpdateProductAction}
                 renderDetails={renderProductDetails}
                 categories={categories} // ✅ pass this down
+                isLoadingCategories={isLoadingCategories}
                 />
 
         </div>

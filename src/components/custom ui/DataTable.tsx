@@ -26,6 +26,12 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { motion } from "framer-motion";
 import { ComboBox } from "@/components/ui/select"; // adjust the path to match your project structure
+export interface ComboBoxProps {
+  value: string;
+  onChange: (val: string) => void;
+  options: { label: string; value: string }[];
+  placeholder?: string;
+}
 
 interface DataWithId {
   _id: string;
@@ -43,8 +49,8 @@ interface DataTableProps<TData extends DataWithId, TValue> {
   detailsTitle?: string;
   renderDetails?: (data: TData) => React.ReactNode;
   allowEdit?: boolean; // Add this new prop
-  categories?: { _id: string; name: string }[]; // ✅ add this
-
+  categories?: CollectionType[];
+  isLoadingCategories?: boolean;
 }
 
 export function DataTable<TData extends DataWithId, TValue>({
@@ -58,6 +64,9 @@ export function DataTable<TData extends DataWithId, TValue>({
   detailsTitle = "Details",
   renderDetails,
   allowEdit = true, 
+  categories,
+  isLoadingCategories = false,
+
 }: DataTableProps<TData, TValue>) {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [selectedRow, setSelectedRow] = useState<TData | null>(null);
@@ -68,8 +77,8 @@ const [editableData, setEditableData] = useState<TData | null>(allowEdit ? null 
   const [currentImage, setCurrentImage] = useState<string | null>(null);
 const [viewMode, setViewMode] = useState<"details" | "edit">(allowEdit ? "details" : "details");
 
-const [categories, setCategories] = useState<{ _id: string; name: string }[]>([]);
- 
+const displayCategories = categories || [];
+ console.log("Categories received in DataTable:", categories);
 const handleInputChange = (key: string, value: unknown) => {
     if (editableData) {
       setEditableData({ ...editableData, [key]: value });
@@ -507,15 +516,35 @@ const handleInputChange = (key: string, value: unknown) => {
                               <span className="text-sm">{value ? "On" : "Off"}</span>
                             </div>
                           ) : key === "category" ? (
-                           <ComboBox
-                              value={String(value)}
-                              onChange={(val: string) => handleInputChange(key, val)}
-                              options={categories.map((cat: { _id: string; name: string }) => ({
-                                label: cat.name,
-                                value: cat._id,
-                              }))}
-                              placeholder="Select category"
-                            />
+                                <div className="mt-1">
+                                  {isLoadingCategories ? (
+                                    <select disabled className="border rounded px-3 py-2 w-full text-sm">
+                                      <option>Loading categories...</option>
+                                    </select>
+                                  ) : displayCategories.length > 0 ? (
+                                    <ComboBox
+                                      value={
+                                        typeof editableData?.category === 'object' 
+                                          ? editableData?.category?._id 
+                                          : editableData?.category || ""
+                                      }
+                                      onChange={(val) => {
+                                        const selectedCat = displayCategories.find(c => c._id === val);
+                                        handleInputChange('category', selectedCat || null);
+                                      }}
+                                      options={displayCategories.map(cat => ({
+                                        label: cat.name,
+                                        value: cat._id,
+                                      }))}
+                                      placeholder="Select category"
+                                    />
+                                  ) : (
+                                    <select disabled className="border rounded px-3 py-2 w-full text-sm">
+                                      <option>No categories available</option>
+                                    </select>
+                                  )}
+                                </div>
+
                           ) : key === "productdetail" ? (
                             <ProductDetailsMiniTable
                               value={value as ProductDetailType[]}

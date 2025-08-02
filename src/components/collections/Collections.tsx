@@ -151,7 +151,6 @@ const CollectionsPage = () => {
                 searchKey="name"
                 onDeleteAction={handleDeleteCollectionAction}
                 onUpdateAction={handleUpdateCollectionAction}
-
             />
 
 
