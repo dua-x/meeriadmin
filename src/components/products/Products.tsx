@@ -89,8 +89,6 @@ useEffect(() => {
                             category {
                                 name
                             }
-                            createdAt
-                            updatedAt
                             IsFeatured
                             productdetail{
                                 color
@@ -99,6 +97,8 @@ useEffect(() => {
                                     stock
                                 }
                             }
+                            createdAt
+                            updatedAt
                         }
                     }
                 `,
@@ -114,15 +114,13 @@ useEffect(() => {
     // Define the data type
 interface Article extends DataWithId {
     name: string;
+    images: string[];
     description: string;
     richDescription: string;
-    images: string[];
     Price: string;
     category: {
         name: string;
     };
-    createdAt: string;
-    updatedAt: string;
     IsFeatured: boolean;
     productdetail: {
         color: string;
@@ -131,6 +129,8 @@ interface Article extends DataWithId {
             stock: number;
         }[];
     };
+    createdAt: string;
+    updatedAt: string;
 }
 
 
@@ -358,7 +358,7 @@ const handleUpdateProductAction = async (updatedData: DataWithId) => {
                 name
                 category
                 Price
-                CountInStock
+                CountINStock
               }
               message
             }

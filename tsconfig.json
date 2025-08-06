@@ -36,7 +36,7 @@
     "src/components/layout.js",
     "src/components/Nav.js",
     "src/components/products/ProductForm.js"
-  ],
+, "src/components/ui/SizeInput.js"  ],
   "exclude": [
     "node_modules"
   ]

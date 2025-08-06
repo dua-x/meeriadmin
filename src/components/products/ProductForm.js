@@ -146,6 +146,7 @@ export default function ProductForm({ initialData }) {
         reader.readAsDataURL(validFiles[0]);
     };
     
+
     const saveCroppedImage = async () => {
         if (!croppedAreaPixels || !imagePreview) return;
 
@@ -371,7 +372,7 @@ export default function ProductForm({ initialData }) {
                     <h1 className="text-2xl font-bold mb-4">Step 2: Select Colors and Sizes</h1>
                     {productdetail.map((detail, detailIndex) => (
                         <div key={detailIndex} className="mb-4">
-                            <div className="form-row mb-2">
+                            <div className="flex items-center gap-3">
                                 <label>Color</label>
                                 <input
                                     className="form-input"
@@ -379,6 +380,12 @@ export default function ProductForm({ initialData }) {
                                     value={detail.color}
                                     onChange={(e) => handleProductDetailChange(detailIndex, 'color', e.target.value)}
                                 />
+                                {detail.color && (
+                                    <div 
+                                    className="w-6 h-6 rounded-full border"
+                                    style={{ backgroundColor: detail.color }}
+                                    />
+                                    )}
                             </div>
                             {detail.sizes.map((size, sizeIndex) => (
                                 <div key={sizeIndex} className="form-row mb-2 flex gap-2">

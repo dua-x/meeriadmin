@@ -16,9 +16,9 @@ interface DataWithId {
 // Extend Collection from DataWithId
 interface Collection extends DataWithId {
     name: string;
-    description: string;
     icon: string;
     typestore: string;
+    description: string;
 }
 
 const CollectionsPage = () => {
@@ -34,9 +34,9 @@ const CollectionsPage = () => {
                             CategoryGET {
                                 _id
                                 name
-                                description
                                 icon
                                 typestore
+                                description
                             }
                         }
                     `

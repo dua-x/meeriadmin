@@ -491,8 +491,11 @@ const handleInputChange = (key: string, value: unknown) => {
                 editableData && (
                   <>
                     <div className="max-h-[70vh] overflow-y-auto">
-                      {Object.entries(editableData).map(([key, value]) =>
-                        key !== "_id" && (
+                      {Object.entries(editableData).map(([key, value]) => {
+                        // Skip these fields only in edit mode
+                        if (key === "_id" || key === "createdAt" || key === "updatedAt") return null;
+                        
+                        return (
                           <div key={key} className="flex flex-col py-2">
                             <label className="text-sm font-semibold capitalize break-words">
                               {key.replace(/_/g, " ")}
@@ -550,6 +553,7 @@ const handleInputChange = (key: string, value: unknown) => {
                               value={value as ProductDetailType[]}
                               onChange={(updated: ProductDetailType[]) => handleInputChange(key, updated)}
                             />
+                            
                           ) : key === "images" && Array.isArray(value) ? (
                               <div className="flex flex-wrap gap-2">
                                 {value.map((imgSrc, index) => (
@@ -671,8 +675,8 @@ const handleInputChange = (key: string, value: unknown) => {
                               />
                             )}
                           </div>
-                        )
-                      )}
+                        );
+                      })}
                     </div>
                     <div className="flex justify-end gap-2 p-4">
                       <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
