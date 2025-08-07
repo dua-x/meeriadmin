@@ -11,8 +11,6 @@ import axios from "axios";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { motion } from "framer-motion";
 
-
-
 interface DataWithId {
     _id: string;
     [key: string]: unknown;
@@ -111,31 +109,33 @@ useEffect(() => {
             });
     }, []);
 
-    // Define the data type
+type SizeType = {
+  size: number;
+  stock: number;
+};
+
+type ProductDetailType = {
+  color: string;
+  sizes: SizeType[];
+};
+
+// Update your Article interface
 interface Article extends DataWithId {
     name: string;
     images: string[];
     description: string;
     richDescription: string;
     Price: string;
-    category: {
-        name: string;
-    };
+    category: CollectionType;
     IsFeatured: boolean;
-    productdetail: {
-        color: string;
-        sizes: {
-            size: number;
-            stock: number;
-        }[];
-    };
+    productdetail: ProductDetailType[];
     createdAt: string;
     updatedAt: string;
 }
 
 
     // Define your columns
-const columns: ColumnDef<DataWithId, unknown>[] = [
+const columns: ColumnDef<Article, unknown>[] = [
   {
   header: "Image",
   accessorFn: (row) => (row as Article).images?.[0] ?? "",
@@ -167,20 +167,22 @@ const columns: ColumnDef<DataWithId, unknown>[] = [
     header: "Price",
   },
   {
-    header: "Category",
-    accessorFn: (row) => (row as any).category?.name || "No Category",
-    cell: (info) => info.getValue(),
+  header: "Category",
+  accessorFn: (row) => {
+    const article = row as Article;
+    return article.category?.name || "No Category";
   },
+  cell: (info) => info.getValue(),
+},
   {
     header: "Product Details",
     accessorFn: (row) => {
-      const details = (row as any).productdetail;
+      const details = row.productdetail;
       if (!Array.isArray(details)) return "No details";
 
       return details
-        .map((d: any) => {
-            const sizes = d.sizes.map((s: SizeType) => `${s.size} (${s.stock})`).join(", ");
-          return `${d.color}: ${sizes}`;
+        .map((d) => {
+          const sizes = d.sizes.map((s: SizeType) => `${s.size} (${s.stock})`).join(", ");                return `${d.color}: ${sizes}`;
         })
         .join(" | ");
     },
@@ -323,19 +325,24 @@ const handleUpdateProductAction = async (updatedData: DataWithId) => {
     }
 
     // Prepare the update data
-    const updateData: any = {
+     const updateData: {
+      _id: string;
+      updates: Partial<Article>;
+    } = {
       _id: updatedData._id,
       updates: {}
     };
 
     // Check for changes in each field
-    Object.keys(updatedData).forEach((key) => {
+     (Object.keys(updatedData) as Array<keyof Article>).forEach((key) => {
       if (JSON.stringify(updatedData[key]) !== JSON.stringify(originalProduct[key])) {
-        // Handle category specially - send only ID
         if (key === "category") {
-          updateData.updates[key] = typeof updatedData[key] === 'object' 
-            ? (updatedData[key] as any)._id 
-            : updatedData[key];
+          // Use type assertion to CategoryType instead of any
+          const category = updatedData[key] as { _id: string; name?: string };
+          updateData.updates[key] = { 
+            _id: category._id,
+            name: category.name || "",
+          };
         } else {
           updateData.updates[key] = updatedData[key];
         }
@@ -418,16 +425,16 @@ const handleUpdateProductAction = async (updatedData: DataWithId) => {
                     {products.length} registered products
                 </p>
                 </div>
-           <DataTable<DataWithId, unknown>
-                columns={columns}
-                data={products}
-                searchKey="name"
-                onDeleteAction={handleDeleteProduct}
-                onUpdateAction={handleUpdateProductAction}
-                renderDetails={renderProductDetails}
-                categories={categories} // ✅ pass this down
-                isLoadingCategories={isLoadingCategories}
-                />
+           <DataTable<Article, unknown>
+            columns={columns}
+            data={products}
+            searchKey="name"
+            onDeleteAction={handleDeleteProduct}
+            onUpdateAction={handleUpdateProductAction}
+            renderDetails={renderProductDetails}
+            categories={categories}
+            isLoadingCategories={isLoadingCategories}
+          />
 
         </div>
     );

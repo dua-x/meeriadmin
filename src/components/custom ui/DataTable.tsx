@@ -80,10 +80,18 @@ const [viewMode, setViewMode] = useState<"details" | "edit">(allowEdit ? "detail
 const displayCategories = categories || [];
  console.log("Categories received in DataTable:", categories);
 const handleInputChange = (key: string, value: unknown) => {
-    if (editableData) {
+  if (editableData) {
+    // Special handling for category to ensure proper typing
+    if (key === 'category') {
+      setEditableData({
+        ...editableData,
+        [key]: value as { _id: string, name?: string } | string | null
+      });
+    } else {
       setEditableData({ ...editableData, [key]: value });
     }
-  };
+  }
+};
 
   const handleSave = () => {
     if (editableData && onUpdateAction) {
@@ -527,9 +535,9 @@ const handleInputChange = (key: string, value: unknown) => {
                                   ) : displayCategories.length > 0 ? (
                                     <ComboBox
                                       value={
-                                        typeof editableData?.category === 'object' 
-                                          ? editableData?.category?._id 
-                                          : editableData?.category || ""
+                                        editableData?.category && typeof editableData.category === 'object'
+                                          ? (editableData.category as { _id: string })?._id
+                                          : (editableData?.category as string) || ""
                                       }
                                       onChange={(val) => {
                                         const selectedCat = displayCategories.find(c => c._id === val);
@@ -547,7 +555,6 @@ const handleInputChange = (key: string, value: unknown) => {
                                     </select>
                                   )}
                                 </div>
-
                           ) : key === "productdetail" ? (
                             <ProductDetailsMiniTable
                               value={value as ProductDetailType[]}

@@ -22,19 +22,6 @@ import Cropper from "react-easy-crop";
 import getCroppedImg from "@/lib/actions/cropImage";
 import { Area } from "react-easy-crop";
 
-
-
-type CollectionType = {
-    _id: string;
-    name: string;
-    description: string;
-    icon: string;
-    color: string;
-    typestore: string;
-    createdAt: string;
-    updatedAt: string;
-};
-
 interface CollectionFormProps {
     initialData?: CollectionType | null;
 }

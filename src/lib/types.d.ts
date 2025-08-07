@@ -1,12 +1,12 @@
 type CollectionType = {
     _id: string;
     name: string;
-    description: string; // ✅ Added this field
-    icon: string;
-    color: string;
-    typestore: string;
-    createdAt: string;
-    updatedAt: string;
+    description?: string; 
+    icon?: string;
+    color?: string;
+    typestore?: string;
+    createdAt?: string;
+    updatedAt?: string;
 };
 
 type SizeType = {
