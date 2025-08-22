@@ -47,17 +47,14 @@ const CollectionsPage = () => {
                 alert("Failed to fetch categories. Please try again.");
             }
         };
-
         fetchCategories();
     }, []);
-
     const handleDeleteCollectionAction = async (id: string) => {
         const token = localStorage.getItem('authtoken');
         if (!token) {
             alert("You need to be logged in to perform this action.");
             return;
         }
-
         try {
             await axios.delete(`${process.env.NEXT_PUBLIC_IPHOST ?? ""}/StoreAPI/categories/delete/${id}`, {
                 headers: { Authorization: `Bearer ${token}` },
