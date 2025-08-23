@@ -190,40 +190,43 @@ const columns: ColumnDef<Article, unknown>[] = [
   },
 ];
 
-    const handleDeleteProduct = async (id: string) => {
-        try {
-            const token = localStorage.getItem("authtoken");
+    const handleDeleteProduct = async (id: string, password: string) => {
+  try {
+    const token = localStorage.getItem("authtoken");
 
-            await axios.post(
-                `${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/products/productPOST`,
-                {
-                    query: `
-                        mutation {
-                            productDELETE(input: {
-                                productId: "${id}"
-                                password: "${id}"
-                            }) {
-                                message
-                            }
-                        }
-                    `,
-                },
-                {
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
-            );
+    await axios.post(
+      `${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/products/productPOST`,
+      {
+        query: `
+          mutation DeleteProduct($input: deleteinput!) {
+            productDELETE(input: $input) {
+              message
+            }
+          }
+        `,
+        variables: {
+          input: {
+            productId: id,
+            password: password, // ✅ use entered password, not id
+          },
+        },
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
 
-            alert("Product deleted successfully!");
-            // Optionally, refresh the products list
-            setProducts((prev) => prev.filter((product) => product._id !== id));
-        } catch (error) {
-            console.error("Error deleting product:", error);
-            alert("Failed to delete the product. Please try again.");
-        }
-    };
+    alert("Product deleted successfully!");
+    setProducts((prev) => prev.filter((product) => product._id !== id));
+  } catch (error) {
+    console.error("Error deleting product:", error);
+    alert("Failed to delete the product. Please try again.");
+  }
+};
+
     const renderProductDetails = (product: DataWithId) => {
         if (!product) return <div>No data available</div>;
 

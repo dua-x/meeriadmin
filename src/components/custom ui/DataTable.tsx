@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Pencil, Trash2, X } from "lucide-react";
 import { Switch } from "@/components/ui/Switch";
+import { Eye, EyeOff } from "lucide-react";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -42,7 +43,7 @@ interface DataTableProps<TData extends DataWithId, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   searchKey: string;
-  onDeleteAction?: (id: string) => void;
+  onDeleteAction?: (id: string,password :string) => void;
   onUpdateAction?: (updatedData: TData) => void;
   showActions?: boolean;
   onRowClick?: (data: TData) => void;
@@ -68,7 +69,9 @@ export function DataTable<TData extends DataWithId, TValue>({
   isLoadingCategories = false,
 
 }: DataTableProps<TData, TValue>) {
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([
+  { id: searchKey, value: "" },  // ✅ ensures empty at start
+]);
   const [selectedRow, setSelectedRow] = useState<TData | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
@@ -76,6 +79,7 @@ export function DataTable<TData extends DataWithId, TValue>({
 const [editableData, setEditableData] = useState<TData | null>(allowEdit ? null : null);  const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [currentImage, setCurrentImage] = useState<string | null>(null);
 const [viewMode, setViewMode] = useState<"details" | "edit">(allowEdit ? "details" : "details");
+const [showPassword, setShowPassword] = useState(false);
 
 const displayCategories = categories || [];
  console.log("Categories received in DataTable:", categories);
@@ -107,17 +111,20 @@ const handleInputChange = (key: string, value: unknown) => {
     setIsDeleteDialogOpen(true);
   };
 
-  const confirmDelete = () => {
-    if (!onDeleteAction) return;
-    if (deletePassword === (selectedProduct?._id as string)) {
-      onDeleteAction(selectedProduct?._id as string);
-      setSelectedProduct(null);
-      setIsDeleteDialogOpen(false);
-      setDeletePassword("");
-    } else {
-      alert("Incorrect password. Please try again.");
-    }
-  };
+const confirmDelete = () => {
+  if (!onDeleteAction || !selectedProduct) return;
+
+  if (!deletePassword) {
+    alert("Please enter your password to confirm deletion.");
+    return;
+  }
+
+  onDeleteAction(selectedProduct._id, deletePassword); // ✅ password passed
+  setSelectedProduct(null);
+  setIsDeleteDialogOpen(false);
+  setDeletePassword("");
+};
+
 
   const handleImageClick = (image: string) => {
     setCurrentImage(image);
@@ -273,48 +280,63 @@ const handleInputChange = (key: string, value: unknown) => {
     <div className="py-5 px-4 md:px-6">
       {/* Delete Confirmation Dialog */}
       {showActions && onDeleteAction && (
-        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Confirm Deletion</DialogTitle>
-              <DialogDescription>
-                This action cannot be undone. This will permanently delete the item.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="p-4 space-y-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <span className="text-sm font-medium text-gray-500">Product ID:</span>
-                <span className="col-span-3 text-sm font-mono p-2 bg-gray-100 rounded">
-                  {selectedProduct?._id as string}
-                </span>
-              </div>
-              <Input
-                type="password"
-                placeholder="Enter your password"
-                value={deletePassword}
-                onChange={(e) => setDeletePassword(e.target.value)}
-                className="mt-4"
-              />
-              <div className="flex justify-end gap-2 mt-4">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsDeleteDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button 
-                    className="bg-red-600 text-white hover:bg-red-700" 
-                    onClick={confirmDelete}
-                  >
-                    Delete
-                  </Button>
-                </motion.div>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+  <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Confirm Deletion</DialogTitle>
+        <DialogDescription>
+          This action cannot be undone. This will permanently delete the item.
+        </DialogDescription>
+      </DialogHeader>
+      <div className="p-4 space-y-4">
+        
+        <span className="text-sm font-medium text-gray-500">
+          Your password
+        </span>
+
+        {/* Password input with eye toggle */}
+        <div className="relative">
+          <Input
+            type={showPassword ? "text" : "password"}
+            placeholder="Enter your password"
+            value={deletePassword}
+            onChange={(e) => setDeletePassword(e.target.value)}
+          />
+
+          <button
+            type="button"
+            className="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-gray-700"
+            onClick={() => setShowPassword((prev) => !prev)}
+          >
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
+
+        {/* Buttons */}
+        <div className="flex justify-end gap-2 mt-4">
+          <Button 
+            variant="outline" 
+            onClick={() => setIsDeleteDialogOpen(false)}
+          >
+            Cancel
+          </Button>
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <Button 
+              className="bg-red-600 text-white hover:bg-red-700" 
+              onClick={async () => {
+                await confirmDelete(); 
+              }}
+            >
+              Delete
+            </Button>
+
+          </motion.div>
+        </div>
+      </div>
+    </DialogContent>
+  </Dialog>
+)}
+
 
       {/* Image Preview Dialog */}
       <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
@@ -363,6 +385,7 @@ const handleInputChange = (key: string, value: unknown) => {
           onChange={(event) => table.getColumn(searchKey)?.setFilterValue(event.target.value)}
           className="w-full max-w-xs md:max-w-sm"
         />
+
       </div>
 
       {/* Table */}

@@ -20,6 +20,7 @@ interface Collection extends DataWithId {
     typestore: string;
     description: string;
 }
+type DeleteAction = (id: string, password?: string) => Promise<void>;
 
 const CollectionsPage = () => {
     const [categories, setCategories] = useState<Collection[]>([]);
@@ -49,23 +50,25 @@ const CollectionsPage = () => {
         };
         fetchCategories();
     }, []);
-    const handleDeleteCollectionAction = async (id: string) => {
-        const token = localStorage.getItem('authtoken');
-        if (!token) {
-            alert("You need to be logged in to perform this action.");
-            return;
-        }
-        try {
-            await axios.delete(`${process.env.NEXT_PUBLIC_IPHOST ?? ""}/StoreAPI/categories/delete/${id}`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            setCategories((prev) => prev.filter((item) => item._id !== id));
-            alert("Collection deleted successfully!");
-        } catch (error) {
-            console.error("Error deleting collection:", error);
-            alert("Failed to delete the collection. Please try again.");
-        }
-    };
+    // Collections
+const handleDeleteCollectionAction: DeleteAction = async (id, _password) => {
+  const token = localStorage.getItem("authtoken");
+  if (!token) {
+    alert("You need to be logged in to perform this action.");
+    return;
+  }
+  try {
+    await axios.delete(`${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/categories/delete/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    setCategories((prev) => prev.filter((item) => item._id !== id));
+    alert("Collection deleted successfully!");
+  } catch (error) {
+    console.error("Error deleting collection:", error);
+    alert("Failed to delete the collection. Please try again.");
+  }
+};
+
     const handleUpdateCollectionAction = async (updatedData: DataWithId) => {
         try {
             const response = await axios.put(
