@@ -201,7 +201,7 @@ const columns: ColumnDef<Article, unknown>[] = [
                         mutation {
                             productDELETE(input: {
                                 productId: "${id}"
-                                password: "younes@"
+                                password: "${id}"
                             }) {
                                 message
                             }
