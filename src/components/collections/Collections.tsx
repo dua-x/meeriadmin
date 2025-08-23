@@ -51,7 +51,7 @@ const CollectionsPage = () => {
         fetchCategories();
     }, []);
     // Collections
-const handleDeleteCollectionAction: DeleteAction = async (id, _password) => {
+const handleDeleteCollectionAction: DeleteAction = async (id, password) => {
   const token = localStorage.getItem("authtoken");
   if (!token) {
     alert("You need to be logged in to perform this action.");
@@ -59,7 +59,10 @@ const handleDeleteCollectionAction: DeleteAction = async (id, _password) => {
   }
   try {
     await axios.delete(`${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/categories/delete/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        "x-admin-password": password ?? "" // example, depends on your API
+      },
     });
     setCategories((prev) => prev.filter((item) => item._id !== id));
     alert("Collection deleted successfully!");
@@ -68,6 +71,7 @@ const handleDeleteCollectionAction: DeleteAction = async (id, _password) => {
     alert("Failed to delete the collection. Please try again.");
   }
 };
+
 
     const handleUpdateCollectionAction = async (updatedData: DataWithId) => {
         try {
