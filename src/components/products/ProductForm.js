@@ -207,9 +207,8 @@ export default function ProductForm({ initialData }) {
     
             const token = localStorage.getItem('authtoken');
     
-            const endpoint = initialData
-                ? `${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/products/${initialData._id}`
-                : `${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/products/CreateProduct`;
+            const endpoint = `${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/products/CreateProduct`;
+
     
             const method = initialData ? 'put' : 'post';
     

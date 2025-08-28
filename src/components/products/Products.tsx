@@ -55,7 +55,6 @@ useEffect(() => {
         }
       );
 
-      console.log("🟢 Response:", response.data);
 
       if (response.data?.data?.CategoryGET) {
         setCategories(response.data.data.CategoryGET);

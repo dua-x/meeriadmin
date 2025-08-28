@@ -13,11 +13,9 @@ export default function EditProductPage() {
             return;
         }
         axios.get('categories/Update?id=' + id).then(response => {
-            console.log(response.data);
             setProductInfo(response.data);
         });
     }, [id]);
-    console.log({ router });
     return (
         <Layout>
             <h1>Edit product</h1>

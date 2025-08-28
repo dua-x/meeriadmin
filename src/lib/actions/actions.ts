@@ -20,7 +20,6 @@ export const getTotalCustomers = async () => {
     })
     return response.data.count;
 }catch(error){
-    console.log(error);
     return 0;
 }
 }
@@ -34,10 +33,8 @@ export const getTotalorders = async ()=>{
                 Authorization: `Bearer ${token}`,
             },
         })
-        console.log(response.data.count.toString())
         return response.data.count;
     }catch(error){
-        console.log(error);
         return 0;
     }
 }

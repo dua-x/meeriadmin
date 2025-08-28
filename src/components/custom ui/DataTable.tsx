@@ -91,7 +91,6 @@ const [crop, setCrop] = useState({ x: 0, y: 0 });
 const [zoom, setZoom] = useState(1);
 const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
 const displayCategories = categories || [];
- console.log("Categories received in DataTable:", categories);
 const handleInputChange = (key: string, value: unknown) => {
   if (editableData) {
     // Special handling for category to ensure proper typing
@@ -144,13 +143,6 @@ const confirmDelete = () => {
     if (editableData) {
       const updatedImages = (editableData.images as string[]).filter((_, i) => i !== index);
       setEditableData({ ...editableData, images: updatedImages });
-    }
-  };
-
-  const handleAddImage = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (editableData && e.target.files) {
-      const newImages = Array.from(e.target.files).map((file) => URL.createObjectURL(file));
-      setEditableData({ ...editableData, images: [...(editableData.images as string[]), ...newImages] });
     }
   };
 
