@@ -327,30 +327,28 @@ const handleUpdateProductAction = async (updatedData: DataWithId) => {
       return;
     }
 
-    // Prepare the update data
-     const updateData: {
+  // Prepare the update data
+    const updateData: {
       _id: string;
-      updates: Partial<Article>;
+      updates: Partial<Omit<Article, "category">> & { category?: string };
     } = {
       _id: updatedData._id,
       updates: {}
     };
 
     // Check for changes in each field
-     (Object.keys(updatedData) as Array<keyof Article>).forEach((key) => {
+    (Object.keys(updatedData) as Array<keyof Article>).forEach((key) => {
       if (JSON.stringify(updatedData[key]) !== JSON.stringify(originalProduct[key])) {
         if (key === "category") {
-          // Use type assertion to CategoryType instead of any
           const category = updatedData[key] as { _id: string; name?: string };
-          updateData.updates[key] = { 
-            _id: category._id,
-            name: category.name || "",
-          };
+          updateData.updates.category = category._id; // ✅ TS now accepts string
         } else {
-          updateData.updates[key] = updatedData[key];
+          updateData.updates[key as Exclude<keyof Article, "category">] =
+            updatedData[key] as any;
         }
       }
     });
+
 
     if (Object.keys(updateData.updates).length === 0) {
       alert("No changes were made.");
@@ -393,10 +391,23 @@ const handleUpdateProductAction = async (updatedData: DataWithId) => {
     const result = response.data.data.productUpdate;
     if (result.product) {
       setProducts((prev) =>
-        prev.map((item) =>
-          item._id === updatedData._id ? { ...item, ...updateData.updates } : item
-        )
+        prev.map((item) => {
+          if (item._id !== updatedData._id) return item;
+
+          const updated = { ...item, ...updateData.updates };
+
+          // 🔑 If category came back as an ID string, map it to full object
+          if (typeof updated.category === "string") {
+            const found = categories.find((c) => c._id === updated.category);
+            if (found) {
+              updated.category = found;
+            }
+          }
+
+          return updated as Article;
+        })
       );
+
       alert(result.message || "Product updated successfully!");
     } else {
       alert("Update failed.");
