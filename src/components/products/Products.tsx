@@ -267,7 +267,7 @@ const columns: ColumnDef<Article, unknown>[] = [
                         <div className="relative aspect-square w-full max-h-[80vh]">
                             <Image
                             src={currentImage}
-                            alt="Enlarged preview"
+                            alt="there is no image"
                             fill
                             className="object-contain rounded-lg"
                             unoptimized={currentImage.startsWith("blob:")}

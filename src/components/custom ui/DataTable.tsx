@@ -7,6 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Pencil, Trash2, X } from "lucide-react";
 import { Switch } from "@/components/ui/Switch";
 import { Eye, EyeOff } from "lucide-react";
+import Cropper from "react-easy-crop";
+import { Area } from "react-easy-crop";
+import getCroppedImg from '@/lib/actions/cropImage';
+
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -70,17 +74,22 @@ export function DataTable<TData extends DataWithId, TValue>({
 
 }: DataTableProps<TData, TValue>) {
 const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([
-  { id: searchKey, value: "" },  // ✅ ensures empty at start
-]);
+  { id: searchKey, value: "" },  
+]); 
+const [imageDialogOpen, setImageDialogOpen] = useState(false);
+const [editableData, setEditableData] = useState<TData & { images?: string[] } | null>(null);
   const [selectedRow, setSelectedRow] = useState<TData | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<TData | null>(null);
-const [editableData, setEditableData] = useState<TData | null>(allowEdit ? null : null);  const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [currentImage, setCurrentImage] = useState<string | null>(null);
 const [viewMode, setViewMode] = useState<"details" | "edit">(allowEdit ? "details" : "details");
 const [showPassword, setShowPassword] = useState(false);
-
+const [imagePreview, setImagePreview] = useState<string | null>(null); // current image being cropped
+const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
+const [crop, setCrop] = useState({ x: 0, y: 0 });
+const [zoom, setZoom] = useState(1);
+const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
 const displayCategories = categories || [];
  console.log("Categories received in DataTable:", categories);
 const handleInputChange = (key: string, value: unknown) => {
@@ -212,12 +221,12 @@ const confirmDelete = () => {
                       className="relative w-20 h-20"
                     >
                       <Image
-                        src={imgSrc as string}
+                        src={imgSrc as string} // always string (URL or base64)
                         alt={`Image ${index + 1}`}
                         fill
                         className="object-cover rounded-lg border cursor-pointer"
-                        onClick={() => handleImageClick(imgSrc as string)}
-                        unoptimized={imgSrc.startsWith('blob:')}
+                        onClick={() => handleEditImage(imgSrc as string, index)}
+                        unoptimized // necessary for base64
                       />
                     </motion.div>
                   ))}
@@ -275,9 +284,88 @@ const confirmDelete = () => {
       </div>
     );
   };
+const onCropComplete = (croppedArea: Area, croppedAreaPixels: Area) => {
+  setCroppedAreaPixels(croppedAreaPixels);
+};
+const handleEditImage = (img: string, index: number) => {
+  setSelectedImageIndex(index);
+  setImagePreview(img);
+};
+
+const handleAddNewImage = (file: File) => {
+  const url = URL.createObjectURL(file);
+  setSelectedImageIndex(null); // new image
+  setImagePreview(url);
+};
 
   return (
     <div className="py-5 px-4 md:px-6">
+      {/* Crop Image Dialog */}
+<Dialog open={!!imagePreview} onOpenChange={() => setImagePreview(null)}>
+  <DialogContent className="max-w-[90vw] md:max-w-2xl h-[70vh]">
+    {imagePreview && (
+      <div className="relative w-full h-full">
+        <Cropper
+          image={imagePreview}
+          crop={crop}
+          zoom={zoom}
+          aspect={3 / 4} // or 1 for square, adjust as needed
+          onCropChange={setCrop}
+          onZoomChange={setZoom}
+          onCropComplete={onCropComplete}
+        />
+      </div>
+    )}
+    <div className="mt-4 flex justify-end gap-2">
+      <Button variant="outline" onClick={() => {
+        setImagePreview(null);
+        setSelectedImageIndex(null);
+      }}>
+        Cancel
+      </Button>
+      <Button onClick={async () => {
+        if (!croppedAreaPixels || !imagePreview) return;
+
+        const croppedFile = await getCroppedImg(imagePreview, croppedAreaPixels);
+
+// Convert to Base64
+const getBase64 = (file: File | Blob): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (err) => reject(err);
+    reader.readAsDataURL(file);
+  });
+
+const base64Image = await getBase64(croppedFile);
+
+// Update editableData.images directly
+if (editableData) {
+  setEditableData(prev => {
+    if (!prev) return prev;
+    const updatedImages = [...(prev.images as string[] || [])];
+    if (selectedImageIndex !== null) {
+      updatedImages[selectedImageIndex] = base64Image; // replace existing
+    } else {
+      updatedImages.push(base64Image); // add new
+    }
+    return { ...prev, images: updatedImages };
+  });
+}
+
+// Reset cropper state
+setCurrentImage(base64Image);
+setImagePreview(null);
+setSelectedImageIndex(null);
+setCroppedAreaPixels(null);
+
+}}>
+  Save Crop
+</Button>
+    </div>
+  </DialogContent>
+</Dialog>
+
       {/* Delete Confirmation Dialog */}
       {showActions && onDeleteAction && (
   <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
@@ -339,43 +427,28 @@ const confirmDelete = () => {
 
 
       {/* Image Preview Dialog */}
-      <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
+      <Dialog open={!!currentImage} onOpenChange={() => setCurrentImage(null)}>
         <DialogContent className="max-w-[90vw] md:max-w-2xl">
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="relative"
-          >
-            {currentImage && (
-              <div className="relative aspect-square w-full max-h-[80vh]">
-                <Image
-                  src={currentImage}
-                  alt="Enlarged preview"
-                  fill
-                  className="object-contain rounded-lg"
-                  unoptimized={currentImage.startsWith('blob:')}
-                />
-              </div>
-            )}
-            <div className="mt-4 flex justify-end gap-2">
-              <Button 
-                variant="outline" 
-                onClick={() => setImageDialogOpen(false)}
-              >
-                Close
-              </Button>
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button 
-                  variant="destructive"
-                  onClick={handleImageDelete}
-                >
-                  Delete Image
-                </Button>
-              </motion.div>
-            </div>
-          </motion.div>
+          {currentImage && (
+            <Image
+              src={currentImage}
+              alt="Enlarged preview"
+              fill
+              className="object-contain rounded-lg"
+              unoptimized={currentImage.startsWith('blob:')}
+            />
+          )}
+          <div className="mt-4 flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setImagePreview(null)}>
+              Close
+            </Button>
+            <Button variant="destructive" onClick={handleImageDelete}>
+              Delete Image
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
+
 
       {/* Search Input */}
       <div className="flex items-center py-4">
@@ -598,8 +671,8 @@ const confirmDelete = () => {
                                         alt={`Image ${index + 1}`}
                                         fill
                                         className=" object-cover rounded-lg border"
-                                        onClick={() => handleImageClick(imgSrc as string)}
-                                        unoptimized={imgSrc.startsWith('blob:')}
+                                        onClick={() => setCurrentImage(imgSrc)} 
+                                        unoptimized
                                       />
                                     </div>
                                     <motion.button
@@ -631,13 +704,25 @@ const confirmDelete = () => {
                                     Add Image
                                   </Button>
                                   <Input
-                                    type="file"
-                                    id="image-input"
-                                    accept="image/*"
-                                    multiple
-                                    className="hidden"
-                                    onChange={handleAddImage}
-                                  />
+  type="file"
+  id="image-input"
+  accept="image/*"
+  multiple
+  className="hidden"
+  onChange={(e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      Array.from(e.target.files).forEach((file) => {
+        // Add the image to your state
+        handleAddNewImage(file);
+
+        // Don't open any dialog automatically
+        // Only open when user clicks the image card elsewhere
+      });
+    }
+    // Reset input so the same file can be selected again if needed
+    e.target.value = "";
+  }}
+/>
                                 </motion.div>
                               </div>
                             ) : key === "icon" && typeof value === "string" ? (
