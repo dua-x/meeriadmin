@@ -337,17 +337,19 @@ const handleUpdateProductAction = async (updatedData: DataWithId) => {
     };
 
     // Check for changes in each field
-    (Object.keys(updatedData) as Array<keyof Article>).forEach((key) => {
-      if (JSON.stringify(updatedData[key]) !== JSON.stringify(originalProduct[key])) {
-        if (key === "category") {
-          const category = updatedData[key] as { _id: string; name?: string };
-          updateData.updates.category = category._id; // ✅ TS now accepts string
-        } else {
-          updateData.updates[key as Exclude<keyof Article, "category">] =
-            updatedData[key] as any;
-        }
-      }
-    });
+(Object.keys(updatedData) as Array<keyof Article>).forEach((key) => {
+  if (JSON.stringify(updatedData[key]) !== JSON.stringify(originalProduct[key])) {
+    if (key === "category") {
+      const category = updatedData[key] as { _id: string; name?: string };
+      updateData.updates.category = category._id; // ✅ string allowed
+    } else {
+      updateData.updates[
+        key as Exclude<keyof Article, "category">
+      ] = updatedData[key] as Article[Exclude<keyof Article, "category">];
+    }
+  }
+});
+
 
 
     if (Object.keys(updateData.updates).length === 0) {
