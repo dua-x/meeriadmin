@@ -65,7 +65,7 @@ export default function Orders() {
         if (response.data?.data?.orderGET) {
           const formattedOrders = response.data.data.orderGET.map((order: OrderType) => ({
             ...order,
-            idorder: order._id,
+            idorder: order.idorder,
           }));
           setOrders(formattedOrders);
         } else {
@@ -165,7 +165,7 @@ export default function Orders() {
     {
       header: "Total",
       accessorKey: "totalprice",
-      cell: (info) => `$${Number(info.getValue()).toFixed(2)}`,
+      cell: (info) => `${Number(info.getValue()).toFixed(2)}DZD`,
     },
     {
       header: "Status",

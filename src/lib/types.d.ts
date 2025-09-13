@@ -63,6 +63,7 @@ type OrderStatus = "en cours de confirmation" | "confirmé" | "en livraison" | "
 
 type OrderType = {
     _id: string;
+    idorder:string:
     firstname?: string;
     lastname?: string;
     orderitems: OrderItem[];  // Changed from tuple [OrderItem] to an array of OrderItem

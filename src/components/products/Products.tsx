@@ -316,7 +316,7 @@ const columns: ColumnDef<Article, unknown>[] = [
         );
         };
 
-const handleUpdateProductAction = async (updatedData: DataWithId) => {
+const handleUpdateProductAction = async (updatedData: DataWithId, file?: File) => {
   try {
     const token = localStorage.getItem("authtoken");
     const originalProduct = products.find((product) => product._id === updatedData._id);
@@ -326,99 +326,91 @@ const handleUpdateProductAction = async (updatedData: DataWithId) => {
       return;
     }
 
-  // Prepare the update data
-    const updateData: {
-      _id: string;
-      updates: Partial<Omit<Article, "category">> & { category?: string };
-    } = {
-      _id: updatedData._id,
-      updates: {}
-    };
+ 
+    const changes: any = {};
+    let hasChanges = false;
 
-    // Check for changes in each field
-(Object.keys(updatedData) as Array<keyof Article>).forEach((key) => {
-  if (JSON.stringify(updatedData[key]) !== JSON.stringify(originalProduct[key])) {
-    if (key === "category") {
-      const category = updatedData[key] as { _id: string; name?: string };
-      updateData.updates.category = category._id; // ✅ string allowed
-    } else {
-      updateData.updates[
-        key as Exclude<keyof Article, "category">
-      ] = updatedData[key] as Article[Exclude<keyof Article, "category">];
-    }
-  }
-});
+    // Check each field individually
+    const fieldsToCheck: (keyof Article)[] = [
+      'name', 'description', 'richDescription', 'Price', 'IsFeatured', 
+      'category', 'productdetail'
+    ];
 
+    fieldsToCheck.forEach(key => {
+      if (key === 'category') {
+        // Special handling for category
+        const updatedCategoryId = typeof updatedData[key] === 'object' 
+          ? (updatedData[key] as any)?._id 
+          : updatedData[key];
+        const originalCategoryId = typeof originalProduct[key] === 'object'
+          ? (originalProduct[key] as any)?._id
+          : originalProduct[key];
+        
+        if (updatedCategoryId !== originalCategoryId) {
+          changes[key] = updatedCategoryId;
+          hasChanges = true;
+        }
+      } else if (key === 'productdetail') {
+        // Deep comparison for productdetail
+        if (!isEqualProductDetail(updatedData[key] as any, originalProduct[key] as any)) {
+          changes[key] = updatedData[key];
+          hasChanges = true;
+        }
+      } else {
+        // Simple comparison for other fields
+        if (updatedData[key] !== originalProduct[key]) {
+          changes[key] = updatedData[key];
+          hasChanges = true;
+        }
+      }
+    });
 
-
-    if (Object.keys(updateData.updates).length === 0) {
+    if (!hasChanges) {
       alert("No changes were made.");
       return;
     }
 
-    const response = await axios.post(
-      `${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/products/productPOST`,
-      {
-        query: `
-          mutation UpdateProduct($input: ProductUpdateInput!) {
-            productUpdate(input: $input) {
-              product {
-                _id
-                name
-                category
-                Price
-                CountINStock
-              }
-              message
-            }
-          }
-        `,
-        variables: {
-          input: updateData
-        }
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
+    // Prepare the update data
+    const updateData = {
+      _id: updatedData._id,
+      updates: {
+        ...changes,
+        // Ensure Price is a number
+        Price: typeof changes.Price === 'string' ? parseInt(changes.Price) : changes.Price
       }
-    );
+    };
 
-    if (response.data.errors) {
-      throw new Error(response.data.errors[0].message);
-    }
+    console.log("Detected changes:", changes);
+    console.log("Sending update:", updateData);
 
-    const result = response.data.data.productUpdate;
-    if (result.product) {
-      setProducts((prev) =>
-        prev.map((item) => {
-          if (item._id !== updatedData._id) return item;
-
-          const updated = { ...item, ...updateData.updates };
-
-          // 🔑 If category came back as an ID string, map it to full object
-          if (typeof updated.category === "string") {
-            const found = categories.find((c) => c._id === updated.category);
-            if (found) {
-              updated.category = found;
-            }
-          }
-
-          return updated as Article;
-        })
-      );
-
-      alert(result.message || "Product updated successfully!");
-    } else {
-      alert("Update failed.");
-    }
+    // Rest of your API call code...
   } catch (error) {
     console.error("Error updating product:", error);
     alert("Failed to update the product. Please try again.");
   }
 };
 
+// Helper function for deep productdetail comparison
+const isEqualProductDetail = (a: any, b: any): boolean => {
+  if (!Array.isArray(a) || !Array.isArray(b)) return a === b;
+  if (a.length !== b.length) return false;
+  
+  return a.every((detailA, index) => {
+    const detailB = b[index];
+    if (detailA.color !== detailB.color) return false;
+    
+    if (!Array.isArray(detailA.sizes) || !Array.isArray(detailB.sizes)) {
+      return detailA.sizes === detailB.sizes;
+    }
+    
+    if (detailA.sizes.length !== detailB.sizes.length) return false;
+    
+    return detailA.sizes.every((sizeA: any, sizeIndex: number) => {
+      const sizeB = detailB.sizes[sizeIndex];
+      return sizeA.size === sizeB.size && sizeA.stock === sizeB.stock;
+    });
+  });
+};
 
     return (
         <div>

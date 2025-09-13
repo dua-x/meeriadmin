@@ -73,26 +73,56 @@ const handleDeleteCollectionAction: DeleteAction = async (id, password) => {
 };
 
 
-    const handleUpdateCollectionAction = async (updatedData: DataWithId) => {
-        try {
-            const response = await axios.put(
-                `${process.env.NEXT_PUBLIC_IPHOST ?? ""}/StoreAPI/categories/update/${updatedData._id}`,
-                updatedData,
-                {
-                    headers: { Authorization: `Bearer ${localStorage.getItem('authtoken')}` },
-                }
-            );
-            if (response.status === 200) {
-                setCategories((prev) =>
-                    prev.map((item) => (item._id === updatedData._id ? updatedData as Collection : item))
-                );
-                alert("Collection updated successfully!");
-            }
-        } catch (error) {
-            console.error("Error updating collection:", error);
-            alert("Failed to update the collection. Please try again.");
-        }
-    };
+const handleUpdateCollectionAction = async (updatedData: Collection, file?: File) => {
+  const formData = new FormData();
+  formData.append("name", updatedData.name);
+  formData.append("typestore", updatedData.typestore);
+  formData.append("description", updatedData.description || "");
+  
+  // Only append icon if a new file is provided
+  if (file) {
+    formData.append("icon", file);
+  }
+  // If no file but icon exists (could be base64 from cropping), handle it
+  else if (updatedData.icon && typeof updatedData.icon === "string") {
+    if (updatedData.icon.startsWith("data:image")) {
+      // Convert base64 to file
+      const base64Response = await fetch(updatedData.icon);
+      const blob = await base64Response.blob();
+      const croppedFile = new File([blob], "cropped-icon.png", { type: blob.type });
+      formData.append("icon", croppedFile);
+    } else if (updatedData.icon.startsWith("http")) {
+      // Keep existing URL, backend should handle this
+      formData.append("existingIcon", updatedData.icon);
+    }
+  }
+  
+  try {
+    const response = await axios.put(
+      `${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/categories/update/${updatedData._id}`,
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("authtoken")}`,
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    
+    if (response.status === 200) {
+      setCategories(prev => prev.map(item => 
+        (item._id === updatedData._id ? response.data : item)
+      ));
+      alert("Collection updated successfully!");
+    }
+  } catch (error) {
+    console.error("Error updating collection:", error);
+    alert("Failed to update the collection. Please try again.");
+  }
+};
+
+
+
 
     const columns: ColumnDef<DataWithId, unknown>[] = [
         {
@@ -149,13 +179,13 @@ const handleDeleteCollectionAction: DeleteAction = async (id, password) => {
 
             </div>
 
-            <DataTable<DataWithId, unknown>
-                columns={columns as ColumnDef<DataWithId, unknown>[]}
-                data={categories}
-                searchKey="name"
-                onDeleteAction={handleDeleteCollectionAction}
-                onUpdateAction={handleUpdateCollectionAction}
-            />
+<DataTable<DataWithId, unknown>
+  columns={columns as ColumnDef<DataWithId, unknown>[]}
+  data={categories}
+  searchKey="name"
+  onDeleteAction={handleDeleteCollectionAction}
+  onUpdateAction={(data, file) => handleUpdateCollectionAction(data as Collection, file)}
+/>
 
 
         </div>
@@ -163,3 +193,4 @@ const handleDeleteCollectionAction: DeleteAction = async (id, password) => {
 };
 
 export default CollectionsPage;
+

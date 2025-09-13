@@ -47,9 +47,9 @@ interface DataTableProps<TData extends DataWithId, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   searchKey: string;
+   showActions?: boolean; 
   onDeleteAction?: (id: string,password :string) => void;
-  onUpdateAction?: (updatedData: TData) => void;
-  showActions?: boolean;
+  onUpdateAction?: (updatedData: TData, file?: File) => void; // Add file parameter  showActions?: boolean;
   onRowClick?: (data: TData) => void;
   detailsTitle?: string;
   renderDetails?: (data: TData) => React.ReactNode;
@@ -76,6 +76,7 @@ export function DataTable<TData extends DataWithId, TValue>({
 const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([
   { id: searchKey, value: "" },  
 ]); 
+const [newIconFile, setNewIconFile] = useState<File | null>(null);
 const [imageDialogOpen, setImageDialogOpen] = useState(false);
 const [editableData, setEditableData] = useState<TData & { images?: string[] } | null>(null);
   const [selectedRow, setSelectedRow] = useState<TData | null>(null);
@@ -105,13 +106,28 @@ const handleInputChange = (key: string, value: unknown) => {
   }
 };
 
-  const handleSave = () => {
-    if (editableData && onUpdateAction) {
-      onUpdateAction(editableData);
-      setSelectedRow(null);
-      setEditableData(null);
+const handleSave = async() => {
+  if (editableData && onUpdateAction) {
+    // Check if there's a new icon file
+    let iconFile: File | undefined;
+    if (editableData.icon && typeof editableData.icon === "string" && editableData.icon.startsWith("blob:")) {
+      // Convert blob URL to file (you'll need to implement this)
+      iconFile = await convertBlobUrlToFile(editableData.icon);
     }
-  };
+    
+    onUpdateAction(editableData, iconFile);
+    setSelectedRow(null);
+    setEditableData(null);
+  }
+};
+
+// Helper function to convert blob URL to File
+const convertBlobUrlToFile = async (blobUrl: string): Promise<File> => {
+  const response = await fetch(blobUrl);
+  const blob = await response.blob();
+  return new File([blob], "icon.png", { type: blob.type });
+};
+
 
   const handleDeleteClick = (product: TData) => {
     if (!onDeleteAction) return;
@@ -161,12 +177,12 @@ const confirmDelete = () => {
     }
   };
 
-  const handleAddIcon = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (editableData && e.target.files && e.target.files[0]) {
-      const newIconUrl = URL.createObjectURL(e.target.files[0]);
-      setEditableData({ ...editableData, icon: newIconUrl });
-    }
-  };
+const handleAddIcon = (e: React.ChangeEvent<HTMLInputElement>) => {
+  if (!editableData || !e.target.files?.[0]) return;
+  const file = e.target.files[0];
+  setNewIconFile(file);
+  setEditableData({ ...editableData, icon: URL.createObjectURL(file) });
+};
 
   const table = useReactTable({
     data,
