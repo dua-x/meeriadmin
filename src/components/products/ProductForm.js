@@ -5,6 +5,8 @@ import { useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
 import Cropper from 'react-easy-crop';
 import getCroppedImg from '@/lib/actions/cropImage';
+import { useRouter } from "next/navigation";
+
 export default function ProductForm({ initialData }) {
     const [step, setStep] = useState(1);
     const [name, setName] = useState(initialData?.name || '');
@@ -164,6 +166,7 @@ export default function ProductForm({ initialData }) {
             console.error("Error cropping image:", error);
         }
     };
+    const router = useRouter();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -219,7 +222,7 @@ export default function ProductForm({ initialData }) {
                 },
             });
     
-            location.href = '/products';
+            router.push("/products"); 
         } catch (err) {
             console.error('Error:', err.message);
             setError('Failed to save product.');
@@ -228,6 +231,7 @@ export default function ProductForm({ initialData }) {
         }
     };    
 
+    
     return (
 
         <Card className="bg-white p-8 rounded-lg shadow-lg max-w-lg w-full max-w-3xl bg-transparent relative">

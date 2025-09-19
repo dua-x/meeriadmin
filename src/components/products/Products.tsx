@@ -326,70 +326,118 @@ const handleUpdateProductAction = async (updatedData: DataWithId, file?: File) =
       return;
     }
 
- 
-    const changes: any = {};
-    let hasChanges = false;
-
-    // Check each field individually
-    const fieldsToCheck: (keyof Article)[] = [
-      'name', 'description', 'richDescription', 'Price', 'IsFeatured', 
-      'category', 'productdetail'
-    ];
-
-    fieldsToCheck.forEach(key => {
-      if (key === 'category') {
-        // Special handling for category
-        const updatedCategoryId = typeof updatedData[key] === 'object' 
-          ? (updatedData[key] as any)?._id 
-          : updatedData[key];
-        const originalCategoryId = typeof originalProduct[key] === 'object'
-          ? (originalProduct[key] as any)?._id
-          : originalProduct[key];
-        
-        if (updatedCategoryId !== originalCategoryId) {
-          changes[key] = updatedCategoryId;
-          hasChanges = true;
-        }
-      } else if (key === 'productdetail') {
-        // Deep comparison for productdetail
-        if (!isEqualProductDetail(updatedData[key] as any, originalProduct[key] as any)) {
-          changes[key] = updatedData[key];
-          hasChanges = true;
-        }
-      } else {
-        // Simple comparison for other fields
-        if (updatedData[key] !== originalProduct[key]) {
-          changes[key] = updatedData[key];
-          hasChanges = true;
+    const formData = new FormData();
+    
+    // Add all updated fields
+    Object.entries(updatedData).forEach(([key, value]) => {
+      if (key !== '_id' && key !== 'images' && key !== 'icon') {
+        if (key === 'productdetail') {
+          formData.append(key, JSON.stringify(value));
+        } else if (key === 'category' && typeof value === 'object') {
+          formData.append(key, (value as any)._id);
+        } else {
+          formData.append(key, String(value));
         }
       }
     });
 
-    if (!hasChanges) {
-      alert("No changes were made.");
-      return;
+    // Handle images - convert base64 to files if needed
+    if (updatedData.images) {
+      const imageFiles: File[] = [];
+      const existingUrls: string[] = [];
+      
+      (updatedData.images as string[]).forEach((img, index) => {
+        if (img.startsWith('data:image/')) {
+          // Convert base64 to file
+          const file = base64ToFile(img, `image-${index}.png`);
+          imageFiles.push(file);
+        } else if (img.startsWith('http')) {
+          // Keep existing Cloudinary URLs
+          existingUrls.push(img);
+        }
+      });
+      
+  
+      formData.append('images', JSON.stringify(existingUrls));
+      
+      imageFiles.forEach(file => {
+        formData.append('images', file);
+      });
     }
 
-    // Prepare the update data
-    const updateData = {
-      _id: updatedData._id,
-      updates: {
-        ...changes,
-        // Ensure Price is a number
-        Price: typeof changes.Price === 'string' ? parseInt(changes.Price) : changes.Price
+
+    if (file) {
+      formData.append('icon', file);
+    }
+
+
+    const response = await axios.put(
+      `${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/products/editProduct/${updatedData._id}`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${token}`,
+        },
       }
-    };
+    );
 
-    console.log("Detected changes:", changes);
-    console.log("Sending update:", updateData);
+    if (response.status === 200) {
+      alert("Product updated successfully!");
+      // Refresh products list
+      const productsResponse = await axios.post(
+        process.env.NEXT_PUBLIC_IPHOST + "/StoreAPI/products/productGET",
+        {
+          query: `
+            query {
+              productGET {
+                _id
+                name
+                description
+                richDescription
+                images
+                Price
+                category {
+                  name
+                }
+                IsFeatured
+                productdetail{
+                  color
+                  sizes{
+                    size
+                    stock
+                  }
+                }
+                createdAt
+                updatedAt
+              }
+            }
+          `,
+        }
+      );
+      setProducts(productsResponse.data.data.productGET);
+    }
 
-    // Rest of your API call code...
   } catch (error) {
     console.error("Error updating product:", error);
     alert("Failed to update the product. Please try again.");
   }
 };
 
+// Helper function to convert base64 to file
+const base64ToFile = (base64: string, filename: string): File => {
+  const arr = base64.split(',');
+  const mime = arr[0].match(/:(.*?);/)?.[1];
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  
+  return new File([u8arr], filename, { type: mime });
+};
 // Helper function for deep productdetail comparison
 const isEqualProductDetail = (a: any, b: any): boolean => {
   if (!Array.isArray(a) || !Array.isArray(b)) return a === b;

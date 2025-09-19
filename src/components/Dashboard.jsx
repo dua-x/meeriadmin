@@ -102,17 +102,19 @@ export default function Dashboard() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="px-4 py-6 md:px-8 md:py-10 xl:mx-10">
-        <h1 className="text-3xl font-bold text-[#857B74] mb-6">Dashboard</h1>
-        <Separator className="bg-grey-1 my-5" />
-        <div className="text-red-500 p-4 border border-red-200 rounded-lg bg-red-50">
-          Error loading dashboard: {error}
-        </div>
+if (error) {
+  return (
+    <div className="px-4 py-6 md:px-8 md:py-10 xl:mx-10">
+      <h1 className="text-3xl font-bold text-[#857B74] mb-6">Dashboard</h1>
+      <Separator className="bg-grey-1 my-5" />
+      <div className="text-red-500 p-4 border border-red-200 rounded-lg bg-red-50">
+        {error === "unauthorized"
+          ? "You are not logged in as an admin. Please sign in to access the dashboard."
+          : "Oops! Something went wrong while loading the dashboard. Please try again :)"}
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-10 xl:mx-10">

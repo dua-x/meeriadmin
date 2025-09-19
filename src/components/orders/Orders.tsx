@@ -3,6 +3,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/custom ui/DataTable";
 import { useEffect, useState } from "react";
 import axios from "axios";
+import {handleDeleteOrder } from "@/lib/actions/actions"
 
 export default function Orders() {
   const [orders, setOrders] = useState<OrderType[]>([]);
@@ -162,6 +163,16 @@ export default function Orders() {
       header: "Order ID",
       accessorKey: "idorder",
     },
+   {
+      header: "Client",
+      accessorKey: "user",
+      cell: (info) => {
+        const order = info.row.original;
+        return order.firstname && order.lastname
+          ? `${order.firstname} ${order.lastname}`
+          : order.user?.username || "Guest Customer";
+      },
+    },
     {
       header: "Total",
       accessorKey: "totalprice",
@@ -173,6 +184,15 @@ export default function Orders() {
       cell: (info) => {
         const status = info.getValue() as OrderStatus;
         const row = info.row.original;
+
+        const statusStyles: Record<OrderStatus, string> = {
+          "en cours de confirmation": "bg-gray-100 text-gray-800",
+          "confirmé": "bg-blue-100 text-blue-800",
+          "en livraison": "bg-yellow-100 text-yellow-800",
+          "livré": "bg-green-100 text-green-800",
+          "annulé": "bg-red-100 text-red-800",
+        };
+
         return (
           <select
             value={status}
@@ -181,17 +201,11 @@ export default function Orders() {
               handleStatusChange(row._id, e.target.value);
             }}
             onClick={(e) => e.stopPropagation()}
-            className={`px-2 py-1 rounded-full text-xs ${
-              status === "livré" ? "bg-green-100 text-green-800" :
-              status === "confirmé" ? "bg-blue-100 text-blue-800" :
-              status === "en livraison" ? "bg-yellow-100 text-yellow-800" :
-              status === "annulé" ? "bg-red-100 text-red-800" :
-              "bg-gray-100 text-gray-800"
-            }`}
+            className={`text-xs font-medium rounded-full px-2 py-1 min-w-[110px] sm:min-w-[140px] ${statusStyles[status]}`}
           >
-            <option value="en cours de confirmation">En cours de confirmation</option>
+            <option value="en cours de confirmation">En cours</option>
             <option value="confirmé">Confirmé</option>
-            <option value="en livraison">En livraison</option>
+            <option value="en livraison">Livraison</option>
             <option value="livré">Livré</option>
             <option value="annulé">Annulé</option>
           </select>
@@ -203,38 +217,56 @@ export default function Orders() {
       accessorKey: "dateordered",
       cell: (info) => {
         const dateStr = info.getValue() as string;
-        return new Date(dateStr).toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
+              return new Date(dateStr).toLocaleString('fr-FR', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+
       },
     },
   ];
 
-  const handleDeleteOrder = async (orderId: string) => {
+  const handleDeleteOrder = async (id: string,password :string) => {
     if (!confirm("Are you sure you want to delete this order?")) return;
 
     try {
-      const token = localStorage.getItem("authtoken");
-      if (!token) throw new Error("Authentication token not found");
+    const token = localStorage.getItem("authtoken");
 
-      await axios.delete(
-        `${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/orders/${orderId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+    const response = await axios.post(
+      `${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/orders/orderPOST`, 
+      {
+        query: `
+          mutation {
+            orderDELETE(input: {
+              _id: "${id}"
+              password: "${password}"
+            }) {
+              message
+            }
+          }
+        `
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
 
-      setOrders(prev => prev.filter(order => order._id !== orderId));
-    } catch (error) {
-      console.error("Error deleting order:", error);
-      alert("Failed to delete the order. Please try again.");
-    }
+    // ⚡ Récupération de la réponse GraphQL
+    const message = response.data.data.orderDELETE.message;
+
+    alert(message);
+
+  } catch (error: any) {
+    console.error("Error deleting order:", error);
+    alert("Failed to delete the order. Please try again.");
+  }
   };
 
   if (loading) {
@@ -280,7 +312,7 @@ export default function Orders() {
             )
           );
         }}
-        showActions={false}
+        showActions={true}
         allowEdit={false}
         renderDetails={renderOrderDetails}
         detailsTitle="Order Details"

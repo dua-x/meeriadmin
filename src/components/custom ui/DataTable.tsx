@@ -338,38 +338,38 @@ const handleAddNewImage = (file: File) => {
 
 // Convert to Base64
 const getBase64 = (file: File | Blob): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = (err) => reject(err);
-    reader.readAsDataURL(file);
-  });
+        new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = (err) => reject(err);
+          reader.readAsDataURL(file);
+        });
 
-const base64Image = await getBase64(croppedFile);
+      const base64Image = await getBase64(croppedFile);
 
-// Update editableData.images directly
-if (editableData) {
-  setEditableData(prev => {
-    if (!prev) return prev;
-    const updatedImages = [...(prev.images as string[] || [])];
-    if (selectedImageIndex !== null) {
-      updatedImages[selectedImageIndex] = base64Image; // replace existing
-    } else {
-      updatedImages.push(base64Image); // add new
-    }
-    return { ...prev, images: updatedImages };
-  });
-}
+      // Update editableData.images directly
+      if (editableData) {
+        setEditableData(prev => {
+          if (!prev) return prev;
+          const updatedImages = [...(prev.images as string[] || [])];
+          if (selectedImageIndex !== null) {
+            updatedImages[selectedImageIndex] = base64Image; // replace existing
+          } else {
+            updatedImages.push(base64Image); // add new
+          }
+          return { ...prev, images: updatedImages };
+        });
+      }
 
-// Reset cropper state
-setCurrentImage(base64Image);
-setImagePreview(null);
-setSelectedImageIndex(null);
-setCroppedAreaPixels(null);
+      // Reset cropper state
+      setCurrentImage(base64Image);
+      setImagePreview(null);
+      setSelectedImageIndex(null);
+      setCroppedAreaPixels(null);
 
-}}>
-  Save Crop
-</Button>
+      }}>
+        Save Crop
+      </Button>
     </div>
   </DialogContent>
 </Dialog>

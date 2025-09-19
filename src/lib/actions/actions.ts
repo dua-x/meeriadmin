@@ -1,12 +1,6 @@
 import axios from 'axios';
 
-export const getTotalSales = async () => {
-    // await connectToDB();
-    // const orders = await Order.find()
-    // const totalOrders = orders.length;
-    // const totalRevenue = orders.reduce((acc, order) => acc + order.totalAmount, 0)
-    // return { totalOrders, totalRevenue }
-}
+
 
 export const getTotalCustomers = async () => {
     try{
@@ -38,26 +32,7 @@ export const getTotalorders = async ()=>{
         return 0;
     }
 }
-export const getSalesPerMonth = async () => {
-    // await connectToDB()
-    // const orders = await Order.find()
 
-    // const salesPerMonth = orders.reduce((acc, order) => {
-    //     const monthIndex = new Date(order.createdAt).getMonth(); // 0 for Janruary --> 11 for December
-    //     acc[monthIndex] = (acc[monthIndex] || 0) + order.totalAmount;
-    //     // For June
-    //     // acc[5] = (acc[5] || 0) + order.totalAmount (orders have monthIndex 5)
-    //     return acc
-    // }, {})
-
-    // const graphData = Array.from({ length: 12 }, (_, i) => {
-    //     const month = new Intl.DateTimeFormat('en-US', { month: 'short' }).format(new Date(0, i))
-    //     // if i === 5 => month = "Jun"
-    //     return { name: month, sales: salesPerMonth[i] || 0 }
-    // })
-
-    // return graphData
-}
 export const handlelog = async () => {
     try {
         const token = localStorage.getItem('authtoken'); // Retrieve token from local storage
@@ -94,3 +69,39 @@ export const handlelog = async () => {
         return error;
     }
 }
+export const handleDeleteOrder = async (id: string, password: string) => {
+  try {
+    const token = localStorage.getItem("authtoken");
+
+    const response = await axios.post(
+      `${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/orders/orderPOST`, 
+      {
+        query: `
+          mutation {
+            orderDELETE(input: {
+              _id: "${id}"
+              password: "${password}"
+            }) {
+              message
+            }
+          }
+        `
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    // ⚡ Récupération de la réponse GraphQL
+    const message = response.data.data.orderDELETE.message;
+
+    alert(message);
+
+  } catch (error: any) {
+    console.error("Error deleting order:", error);
+    alert("Failed to delete the order. Please try again.");
+  }
+};
