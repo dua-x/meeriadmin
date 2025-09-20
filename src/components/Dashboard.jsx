@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import SalesChart from "@/components/custom ui/SalesChart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -15,6 +16,8 @@ function Skeleton({ className }) {
 export default function Dashboard() {
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [totalOrdersConfirmed, setTotalOrdersConfirmed] = useState(0);
+  const [totalOrdersLivre, setTotalOrdersLivre] = useState(0);
+  const [totalRevenueLivre, setTotalRevenueLivre] = useState(0); 
   const [totalOrders, setTotalOrders] = useState(0);
   const [totalCustomers, setTotalCustomers] = useState(0);
   const [graphData, setGraphData] = useState([]);
@@ -34,6 +37,7 @@ export default function Dashboard() {
         
         const [
           ordersConfirmedResponse,
+          ordersLivreResponse,
           ordersResponse,
           ordersTotalRevenueResponse,
           customersResponse
@@ -41,10 +45,13 @@ export default function Dashboard() {
           axios.get(`${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/orders/countordersconfirm`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
+          axios.get(`${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/orders/countorderslivre`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
           axios.get(`${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/orders/countorders`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get(`${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/orders/totalprice`, {
+          axios.get(`${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/orders/totalorderslivre`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
           axios.get(`${process.env.NEXT_PUBLIC_IPHOST}/StoreAPI/users/countusers`, {
@@ -53,9 +60,9 @@ export default function Dashboard() {
         ]);
 
         setTotalOrdersConfirmed(ordersConfirmedResponse.data.count);
+        setTotalOrdersLivre(ordersLivreResponse.data.count);
         setTotalOrders(ordersResponse.data.count);
-        setTotalRevenue(ordersTotalRevenueResponse.data.totalPrice);
-        setTotalCustomers(customersResponse.data.count);
+        setTotalRevenueLivre(ordersTotalRevenueResponse.data.total);
 
         const currentMonth = new Date().getMonth();
         const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -125,39 +132,52 @@ if (error) {
 
       <Separator className="bg-grey-1 my-5" />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-        <StatCard 
-          title="Total Revenue" 
-          value={formatCurrency(totalRevenue)} 
-          icon={<CircleDollarSign className="h-5 w-5" />}
-          trend="up"
-          change="12% from last month"
-        />
-        
-        <StatCard 
-          title="Confirmed Orders" 
-          value={totalOrdersConfirmed} 
-          icon={<CheckCircle className="h-5 w-5" />}
-          trend="up"
-          change={`${Math.round((totalOrdersConfirmed / totalOrders) * 100)}% of total orders`}
-        />
-        
-        <StatCard 
-          title="Total Orders" 
-          value={totalOrders} 
-          icon={<ShoppingBag className="h-5 w-5" />}
-          trend={totalOrders > totalOrdersConfirmed ? "down" : "up"}
-          change={`${totalOrders - totalOrdersConfirmed} pending`}
-        />
-        
-        <StatCard 
-          title="Total Customers" 
-          value={totalCustomers} 
-          icon={<UserRound className="h-5 w-5" />}
-          trend="up"
-          change="8% from last month"
-        />
-      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-10">
+    <StatCard 
+      title="Revenue (Delivered)" 
+      value={formatCurrency(totalRevenueLivre)} 
+      icon={<CircleDollarSign className="h-5 w-5 text-green-500" />}
+      trend="up"
+      change="From delivered orders"
+      link="/orders?status=delivered"
+    />
+      
+  <StatCard 
+    title="Orders Confirmed" 
+    value={totalOrdersConfirmed} 
+    icon={<CheckCircle className="h-5 w-5 text-blue-500" />}
+    trend="up"
+    change={`${Math.round((totalOrdersConfirmed / (totalOrders || 1)) * 100)}% of total`}
+    link="/orders?status=confirmed"
+  />
+  
+  <StatCard 
+    title="Orders Delivered" 
+    value={totalOrdersLivre} 
+    icon={<CheckCircle className="h-5 w-5 text-green-500" />}
+    trend="up"
+    change={`${Math.round((totalOrdersLivre / (totalOrders || 1)) * 100)}% of total`}
+    link="/orders?status=delivered"
+  />
+  
+  <StatCard 
+    title="Total Orders" 
+    value={totalOrders} 
+    icon={<ShoppingBag className="h-5 w-5" />}
+    trend={totalOrders > totalOrdersConfirmed ? "down" : "up"}
+    change={`${totalOrders - totalOrdersConfirmed} pending`}
+    link="/orders"
+  />
+  
+  <StatCard 
+    title="Total Customers" 
+    value={totalCustomers} 
+    icon={<UserRound className="h-5 w-5" />}
+    trend="up"
+    change="8% from last month"
+    link="/costumers"
+  />
+</div>
 
       <Card className="mb-10">
         <CardHeader>
@@ -174,7 +194,7 @@ if (error) {
   );
 }
 
-function StatCard({ title, value, icon, trend, change }) {
+function StatCard({ title, value, icon, trend, change ,link }) {
   const trendColors = {
     up: "text-green-500",
     down: "text-red-500",
@@ -186,9 +206,13 @@ function StatCard({ title, value, icon, trend, change }) {
     down: "↓",
     neutral: "→"
   };
+   const router = useRouter();
 
   return (
-    <Card className="hover:shadow-lg transition-shadow duration-200">
+     <Card
+      className="hover:shadow-lg transition-shadow duration-200 cursor-pointer"
+      onClick={() => link && router.push(link)}
+    >
       <CardHeader className="flex flex-row justify-between items-center pb-2">
         <CardTitle className="text-sm font-medium text-gray-500">{title}</CardTitle>
         <span className={`rounded-full p-2 ${trendColors[trend]} bg-opacity-20 ${trend === 'up' ? 'bg-green-100' : trend === 'down' ? 'bg-red-100' : 'bg-gray-100'}`}>

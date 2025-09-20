@@ -180,9 +180,16 @@ const confirmDelete = () => {
 const handleAddIcon = (e: React.ChangeEvent<HTMLInputElement>) => {
   if (!editableData || !e.target.files?.[0]) return;
   const file = e.target.files[0];
+  const url = URL.createObjectURL(file);
+
+  // Instead of setting icon immediately, open crop dialog
+  setSelectedImageIndex(-1); // use -1 to mark it's an icon
+  setImagePreview(url);
+
+  // Store original in case user cancels
   setNewIconFile(file);
-  setEditableData({ ...editableData, icon: URL.createObjectURL(file) });
 };
+
 
   const table = useReactTable({
     data,
@@ -234,7 +241,7 @@ const handleAddIcon = (e: React.ChangeEvent<HTMLInputElement>) => {
                         fill
                         className="object-cover rounded-lg border cursor-pointer"
                         onClick={() => handleEditImage(imgSrc as string, index)}
-                        unoptimized // necessary for base64
+                        unoptimized 
                       />
                     </motion.div>
                   ))}
@@ -259,9 +266,13 @@ const handleAddIcon = (e: React.ChangeEvent<HTMLInputElement>) => {
                       alt="Icon"
                       fill
                       className="object-cover rounded-lg border cursor-pointer"
-                      onClick={() => handleImageClick(value)}
+                      onClick={() => {
+                        setSelectedImageIndex(-1); // -1 = we’re editing the icon
+                        setImagePreview(value);    // open the cropper with current icon
+                      }}
                       unoptimized={value.startsWith('blob:')}
                     />
+
                   </motion.div>
                 </div>
               </div>
@@ -309,70 +320,75 @@ const handleAddNewImage = (file: File) => {
   return (
     <div className="py-5 px-4 md:px-6">
       {/* Crop Image Dialog */}
-<Dialog open={!!imagePreview} onOpenChange={() => setImagePreview(null)}>
-  <DialogContent className="max-w-[90vw] md:max-w-2xl h-[70vh]">
-    {imagePreview && (
-      <div className="relative w-full h-full">
-        <Cropper
-          image={imagePreview}
-          crop={crop}
-          zoom={zoom}
-          aspect={3 / 4} // or 1 for square, adjust as needed
-          onCropChange={setCrop}
-          onZoomChange={setZoom}
-          onCropComplete={onCropComplete}
-        />
-      </div>
-    )}
-    <div className="mt-4 flex justify-end gap-2">
-      <Button variant="outline" onClick={() => {
-        setImagePreview(null);
-        setSelectedImageIndex(null);
-      }}>
-        Cancel
-      </Button>
-      <Button onClick={async () => {
-        if (!croppedAreaPixels || !imagePreview) return;
+      <Dialog open={!!imagePreview} onOpenChange={() => setImagePreview(null)}>
+        <DialogContent className="max-w-[90vw] md:max-w-2xl h-[70vh]">
+          {imagePreview && (
+            <div className="relative w-full h-full">
+              <Cropper
+                image={imagePreview}
+                crop={crop}
+                zoom={zoom}
+                aspect={3 / 4} // or 1 for square, adjust as needed
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                onCropComplete={onCropComplete}
+              />
+            </div>
+          )}
+          <div className="mt-4 flex justify-end gap-2">
+            <Button variant="outline" onClick={() => {
+              setImagePreview(null);
+              setSelectedImageIndex(null);
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={async () => {
+              if (!croppedAreaPixels || !imagePreview) return;
 
-        const croppedFile = await getCroppedImg(imagePreview, croppedAreaPixels);
+              const croppedFile = await getCroppedImg(imagePreview, croppedAreaPixels);
 
-// Convert to Base64
-const getBase64 = (file: File | Blob): Promise<string> =>
-        new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = (err) => reject(err);
-          reader.readAsDataURL(file);
-        });
+              const getBase64 = (file: File | Blob): Promise<string> =>
+                new Promise((resolve, reject) => {
+                  const reader = new FileReader();
+                  reader.onload = () => resolve(reader.result as string);
+                  reader.onerror = (err) => reject(err);
+                  reader.readAsDataURL(file);
+                });
 
-      const base64Image = await getBase64(croppedFile);
+              const base64Image = await getBase64(croppedFile);
 
-      // Update editableData.images directly
-      if (editableData) {
-        setEditableData(prev => {
-          if (!prev) return prev;
-          const updatedImages = [...(prev.images as string[] || [])];
-          if (selectedImageIndex !== null) {
-            updatedImages[selectedImageIndex] = base64Image; // replace existing
-          } else {
-            updatedImages.push(base64Image); // add new
-          }
-          return { ...prev, images: updatedImages };
-        });
-      }
+              if (editableData) {
+                setEditableData(prev => {
+                  if (!prev) return prev;
 
-      // Reset cropper state
-      setCurrentImage(base64Image);
-      setImagePreview(null);
-      setSelectedImageIndex(null);
-      setCroppedAreaPixels(null);
+                  // 🟢 If editing icon (selectedImageIndex === -1)
+                  if (selectedImageIndex === -1) {
+                    return { ...prev, icon: base64Image };
+                  }
 
-      }}>
-        Save Crop
-      </Button>
-    </div>
-  </DialogContent>
-</Dialog>
+                  // 🟢 If editing product images
+                  const updatedImages = [...(prev.images as string[] || [])];
+                  if (selectedImageIndex !== null) {
+                    updatedImages[selectedImageIndex] = base64Image;
+                  } else {
+                    updatedImages.push(base64Image);
+                  }
+                  return { ...prev, images: updatedImages };
+                });
+              }
+
+              // reset
+              setCurrentImage(base64Image);
+              setImagePreview(null);
+              setSelectedImageIndex(null);
+              setCroppedAreaPixels(null);
+            }}>
+              Save Crop
+            </Button>
+
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       {showActions && onDeleteAction && (
@@ -711,26 +727,26 @@ const getBase64 = (file: File | Blob): Promise<string> =>
                                   >
                                     Add Image
                                   </Button>
-                                  <Input
-  type="file"
-  id="image-input"
-  accept="image/*"
-  multiple
-  className="hidden"
-  onChange={(e) => {
-    if (e.target.files && e.target.files.length > 0) {
-      Array.from(e.target.files).forEach((file) => {
-        // Add the image to your state
-        handleAddNewImage(file);
+                                    <Input
+                                      type="file"
+                                      id="image-input"
+                                      accept="image/*"
+                                      multiple
+                                      className="hidden"
+                                      onChange={(e) => {
+                                        if (e.target.files && e.target.files.length > 0) {
+                                          Array.from(e.target.files).forEach((file) => {
+                                            // Add the image to your state
+                                            handleAddNewImage(file);
 
-        // Don't open any dialog automatically
-        // Only open when user clicks the image card elsewhere
-      });
-    }
-    // Reset input so the same file can be selected again if needed
-    e.target.value = "";
-  }}
-/>
+                                            // Don't open any dialog automatically
+                                            // Only open when user clicks the image card elsewhere
+                                          });
+                                        }
+                                        // Reset input so the same file can be selected again if needed
+                                        e.target.value = "";
+                                      }}
+                                    />
                                 </motion.div>
                               </div>
                             ) : key === "icon" && typeof value === "string" ? (
@@ -742,13 +758,17 @@ const getBase64 = (file: File | Blob): Promise<string> =>
                                       className="relative w-20 aspect-[3/4]"
                                     >
                                       <Image
-                                        src={value}
-                                        alt="Icon"
-                                        fill
-                                        className="object-cover rounded-lg border cursor-pointer"
-                                        onClick={() => handleImageClick(value)}
-                                        unoptimized={value.startsWith('blob:')}
-                                      />
+  src={value}
+  alt="Icon"
+  fill
+  className="object-cover rounded-lg border cursor-pointer"
+  onClick={() => {
+    setSelectedImageIndex(-1); // -1 = we’re editing the icon
+    setImagePreview(value);    // open the cropper with current icon
+  }}
+  unoptimized={value.startsWith('blob:')}
+/>
+
                                     </motion.div>
                                     <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                                       <Button
